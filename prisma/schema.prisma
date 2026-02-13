@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  ANALYST
+}
+
+model User {
+  id             String               @id @default(cuid())
+  name           String
+  email          String               @unique
+  password       String
+  role           UserRole             @default(ANALYST)
+  createdAt      DateTime             @default(now())
+  graphs         Graph[]
+  collaborations GraphCollaborator[]
+}
+
+model Graph {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  caseNumber  String?
+  isPublic    Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  nodes         Node[]
+  edges         Edge[]
+  collaborators GraphCollaborator[]
+
+  @@index([userId])
+}
+
+model GraphCollaborator {
+  id        String   @id @default(cuid())
+  graphId   String
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([graphId, userId])
+  @@index([graphId])
+  @@index([userId])
+}
+
+model NodeTypeConfig {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  label     String
+  color     String
+  icon      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Node {
+  id        String   @id @default(cuid())
+  graphId   String
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  type      String
+  label     String
+  positionX Float    @default(0)
+  positionY Float    @default(0)
+  metadata  Json?
+  color     String?
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  edgesFrom Edge[]   @relation("EdgeSource")
+  edgesTo   Edge[]   @relation("EdgeTarget")
+
+  @@index([graphId])
+}
+
+enum EdgeType {
+  CONTACT
+  TRANSACTION
+  KINSHIP
+  ASSOCIATE
+  OWNERSHIP
+  LOCATION
+  EMPLOYMENT
+  COMMUNICATION
+  TEMPORAL
+  CUSTOM
+}
+
+model Edge {
+  id       String   @id @default(cuid())
+  graphId  String
+  graph    Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  sourceId String
+  source   Node     @relation("EdgeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId String
+  target   Node     @relation("EdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  type     EdgeType
+  label    String?
+  weight   Float?   @default(1)
+  directed Boolean  @default(true)
+  metadata Json?
+  color    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([graphId])
+  @@index([sourceId])
+  @@index([targetId])
+}

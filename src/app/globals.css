@@ -1,26 +1,354 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* =============================================
+   THEME SYSTEM — CSS Custom Properties
+   ============================================= */
+
+/* Dark theme (default) */
+body {
+  background: var(--th-bg-primary);
+  color: var(--th-text-primary);
+  /* Aumenta el tamaño base de 16px a 17px o 18px */
+  font-size: 17px; 
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Asegura que los elementos de formulario hereden el tamaño */
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+[data-theme="dark"], :root {
+  --th-bg-primary: #0A0F1A;
+  --th-bg-secondary: #0F172A;
+  --th-bg-tertiary: rgba(30, 41, 59, 0.5);
+  --th-bg-hover: #334155;
+  --th-bg-input: rgba(30, 41, 59, 0.5);
+  --th-bg-overlay: rgba(15, 23, 42, 0.95);
+  --th-bg-overlay-light: rgba(15, 23, 42, 0.90);
+  --th-bg-backdrop: rgba(0, 0, 0, 0.6);
+  --th-bg-node: #0F172A;
+  --th-bg-btn-secondary: #1e293b;
+  --th-bg-btn-secondary-hover: #334155;
+
+  --th-border: rgba(51, 65, 85, 0.5);
+  --th-border-strong: #1e293b;
+  --th-border-focus: #3b82f6;
+
+  --th-text-primary: #ffffff;
+  --th-text-secondary: #cbd5e1;
+  --th-text-muted: #94a3b8;
+  --th-text-dimmed: #64748b;
+  --th-text-faint: #475569;
+  --th-text-on-accent: #ffffff;
+  --th-icon-color: #ffffff;
+
+  --th-accent: #3b82f6;
+  --th-accent-hover: #2563eb;
+
+  --th-dots: rgba(255, 255, 255, 0.12);
+  --th-minimap-mask: rgba(10, 15, 26, 0.8);
+  --th-scrollbar: rgba(100, 116, 139, 0.3);
+  --th-scrollbar-hover: rgba(100, 116, 139, 0.5);
+
+  --th-select-bg: #0F172A;
+  --th-select-text: #e2e8f0;
+
+  --th-leaflet-bg: #1a1a2e;
+  --th-leaflet-tooltip-bg: #0F172A;
+  --th-leaflet-tooltip-border: rgba(51, 65, 85, 0.5);
+  --th-leaflet-tooltip-text: #e2e8f0;
+
+  --th-logo-filter: brightness(0) invert(1);
+
+  color-scheme: dark;
+}
+
+/* Institutional theme — Fiscalía: white + navy blue #1D3E81 + red #B80D0E */
+[data-theme="institutional"] {
+  --th-bg-primary: #f0f2f5;
+  --th-bg-secondary: #ffffff;
+  --th-bg-tertiary: #e8ecf1;
+  --th-bg-hover: #dce3ec;
+  --th-bg-input: #edf0f5;
+  --th-bg-overlay: rgba(255, 255, 255, 0.97);
+  --th-bg-overlay-light: rgba(255, 255, 255, 0.95);
+  --th-bg-backdrop: rgba(29, 62, 129, 0.25);
+  --th-bg-node: #ffffff;
+  --th-bg-btn-secondary: #e8ecf1;
+  --th-bg-btn-secondary-hover: #dce3ec;
+
+  --th-border: rgba(29, 62, 129, 0.2);
+  --th-border-strong: rgba(29, 62, 129, 0.3);
+  --th-border-focus: #1D3E81;
+
+  --th-text-primary: #1a1a2e;
+  --th-text-secondary: #2d3748;
+  --th-text-muted: #4a5568;
+  --th-text-dimmed: #718096;
+  --th-text-faint: #a0aec0;
+  --th-text-on-accent: #ffffff;
+  --th-icon-color: #1D3E81;
+
+  --th-accent: #1D3E81;
+  --th-accent-hover: #162f63;
+
+  --th-dots: rgba(29, 62, 129, 0.08);
+  --th-minimap-mask: rgba(240, 242, 245, 0.8);
+  --th-scrollbar: rgba(29, 62, 129, 0.15);
+  --th-scrollbar-hover: rgba(29, 62, 129, 0.3);
+
+  --th-select-bg: #ffffff;
+  --th-select-text: #1a1a2e;
+
+  --th-leaflet-bg: #e8ecf1;
+  --th-leaflet-tooltip-bg: #ffffff;
+  --th-leaflet-tooltip-border: rgba(29, 62, 129, 0.2);
+  --th-leaflet-tooltip-text: #1a1a2e;
+
+  --th-logo-filter: none;
+
+  color-scheme: light;
+}
+
+/* Midnight theme — deep indigo dark variant */
+[data-theme="midnight"] {
+  --th-bg-primary: #070B16;
+  --th-bg-secondary: #0C1222;
+  --th-bg-tertiary: rgba(25, 35, 55, 0.5);
+  --th-bg-hover: #1e2d4a;
+  --th-bg-input: rgba(25, 35, 55, 0.5);
+  --th-bg-overlay: rgba(12, 18, 34, 0.95);
+  --th-bg-overlay-light: rgba(12, 18, 34, 0.90);
+  --th-bg-backdrop: rgba(0, 0, 0, 0.6);
+  --th-bg-node: #0C1222;
+  --th-bg-btn-secondary: #162033;
+  --th-bg-btn-secondary-hover: #1e2d4a;
+
+  --th-border: rgba(56, 68, 100, 0.5);
+  --th-border-strong: #162033;
+  --th-border-focus: #818cf8;
+
+  --th-text-primary: #e0e7ff;
+  --th-text-secondary: #a5b4fc;
+  --th-text-muted: #7c8bbf;
+  --th-text-dimmed: #5b6a99;
+  --th-text-faint: #3f4e77;
+  --th-text-on-accent: #ffffff;
+  --th-icon-color: #e0e7ff;
+
+  --th-accent: #818cf8;
+  --th-accent-hover: #6366f1;
+
+  --th-dots: rgba(129, 140, 248, 0.10);
+  --th-minimap-mask: rgba(7, 11, 22, 0.8);
+  --th-scrollbar: rgba(92, 104, 152, 0.3);
+  --th-scrollbar-hover: rgba(92, 104, 152, 0.5);
+
+  --th-select-bg: #0C1222;
+  --th-select-text: #e0e7ff;
+
+  --th-leaflet-bg: #0C1222;
+  --th-leaflet-tooltip-bg: #0C1222;
+  --th-leaflet-tooltip-border: rgba(56, 68, 100, 0.5);
+  --th-leaflet-tooltip-text: #e0e7ff;
+
+  --th-logo-filter: brightness(0) invert(1);
+
+  color-scheme: dark;
+}
+
+/* =============================================
+   BASE STYLES
+   ============================================= */
+
+body {
+  background: var(--th-bg-primary);
+  color: var(--th-text-primary);
+}
+
+/* =============================================
+   THEME-AWARE OVERRIDES for Tailwind classes
+   These ensure hardcoded Tailwind utilities adapt
+   ============================================= */
+
+/* Menu item / dropdown item — universal via CSS vars */
+.th-menu-item {
+  color: var(--th-text-secondary);
+}
+.th-menu-item:hover {
+  background-color: var(--th-bg-hover);
+  color: var(--th-text-primary);
+}
+
+/* Ghost button — icon buttons, undo/redo */
+.th-btn-ghost {
+  color: var(--th-text-muted);
+}
+.th-btn-ghost:hover {
+  color: var(--th-text-primary);
+  background-color: var(--th-bg-hover);
+}
+
+/* Secondary button — cancel, etc */
+.th-btn-secondary {
+  color: var(--th-text-secondary);
+  background-color: var(--th-bg-btn-secondary);
+}
+.th-btn-secondary:hover {
+  background-color: var(--th-bg-btn-secondary-hover);
+}
+
+/* Connection list items */
+.th-connection-item {
+  color: var(--th-text-secondary);
+  background-color: var(--th-bg-tertiary);
+}
+.th-connection-item:hover {
+  background-color: var(--th-bg-hover);
+}
+
+/* React Flow controls — override for institutional (light) theme */
+[data-theme="institutional"] .react-flow__controls button {
+  background-color: var(--th-bg-secondary) !important;
+  border-color: var(--th-border) !important;
+  color: var(--th-text-primary) !important;
+  fill: var(--th-text-primary) !important;
+}
+[data-theme="institutional"] .react-flow__controls button:hover {
+  background-color: var(--th-bg-hover) !important;
+}
+[data-theme="institutional"] .react-flow__controls button svg {
+  fill: var(--th-text-primary) !important;
+}
+
+/* React Flow node */
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+.react-flow__handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__controls {
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.react-flow__minimap {
+  border-radius: 8px !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--th-scrollbar);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--th-scrollbar-hover);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-slideIn {
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.25s ease-out;
+}
+
+/* Resize handle for bottom panels */
+.resize-handle {
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 10px;
+  transition: background-color 0.15s;
+}
+.resize-handle:hover,
+.resize-handle:active {
+  background-color: var(--th-bg-hover);
+}
+.resize-handle .resize-bar {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background-color: var(--th-text-faint);
+  transition: background-color 0.15s;
+}
+.resize-handle:hover .resize-bar {
+  background-color: var(--th-accent);
+}
+
+/* Select styling */
+select option {
+  background-color: var(--th-select-bg);
+  color: var(--th-select-text);
+}
+
+/* Leaflet theme-aware tooltips */
+.leaflet-tooltip-dark {
+  background: var(--th-leaflet-tooltip-bg) !important;
+  border: 1px solid var(--th-leaflet-tooltip-border) !important;
+  color: var(--th-leaflet-tooltip-text) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+.leaflet-tooltip-dark::before {
+  border-top-color: var(--th-leaflet-tooltip-bg) !important;
+}
+
+/* Leaflet container */
+.leaflet-container {
+  background: var(--th-leaflet-bg) !important;
 }
