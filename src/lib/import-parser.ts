@@ -10,6 +10,10 @@ export interface ParsedNode {
   type: string;
   label: string;
   metadata?: Record<string, unknown>;
+  positionX?: number;
+  positionY?: number;
+  color?: string;
+  icon?: string;
 }
 
 export interface ParsedEdge {
@@ -17,15 +21,29 @@ export interface ParsedEdge {
   targetTemp: string;
   type: string;
   label?: string;
+  weight?: number;
+  directed?: boolean;
+  metadata?: Record<string, unknown>;
+  color?: string;
 }
 
 export interface ParseResult {
   nodes: ParsedNode[];
   edges: ParsedEdge[];
   errors: string[];
+  graphMeta?: {
+    name?: string;
+    description?: string;
+    caseNumber?: string;
+  };
 }
 
 export async function parseImportFile(file: File, validNodeTypes: string[]): Promise<ParseResult> {
+  // Detect JSON by extension
+  if (file.name.toLowerCase().endsWith('.json')) {
+    return parseJsonFile(file, validNodeTypes);
+  }
+
   const errors: string[] = [];
   const nodes: ParsedNode[] = [];
   const edges: ParsedEdge[] = [];
@@ -55,6 +73,135 @@ export async function parseImportFile(file: File, validNodeTypes: string[]): Pro
   }
 
   return { nodes, edges, errors };
+}
+
+async function parseJsonFile(file: File, validNodeTypes: string[]): Promise<ParseResult> {
+  const errors: string[] = [];
+  const nodes: ParsedNode[] = [];
+  const edges: ParsedEdge[] = [];
+
+  let json: unknown;
+  try {
+    const text = await file.text();
+    json = JSON.parse(text);
+  } catch {
+    return { nodes, edges, errors: ['El archivo no es JSON válido'] };
+  }
+
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+    return { nodes, edges, errors: ['El JSON debe ser un objeto con al menos "nodes"'] };
+  }
+
+  const data = json as Record<string, unknown>;
+
+  // Accept { graph?, nodes[], edges? }
+  const rawNodes = data.nodes;
+  if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+    return { nodes, edges, errors: ['El JSON debe contener un array "nodes" con al menos un elemento'] };
+  }
+
+  // Extract graph metadata
+  let graphMeta: ParseResult['graphMeta'];
+  if (data.graph && typeof data.graph === 'object' && !Array.isArray(data.graph)) {
+    const g = data.graph as Record<string, unknown>;
+    graphMeta = {
+      name: typeof g.name === 'string' ? g.name : undefined,
+      description: typeof g.description === 'string' ? g.description : undefined,
+      caseNumber: typeof g.caseNumber === 'string' ? g.caseNumber : undefined,
+    };
+  }
+
+  const validNodeTypeSet = new Set(validNodeTypes);
+  const tempIds = new Set<string>();
+
+  // Parse nodes
+  for (let i = 0; i < rawNodes.length; i++) {
+    const raw = rawNodes[i];
+    if (typeof raw !== 'object' || raw === null) {
+      errors.push(`Nodo #${i + 1}: no es un objeto válido`);
+      continue;
+    }
+    const n = raw as Record<string, unknown>;
+
+    const tempId = String(n.id ?? n.tempId ?? '').trim();
+    const type = String(n.type ?? '').trim().toUpperCase();
+    const label = String(n.label ?? '').trim();
+
+    if (!tempId) { errors.push(`Nodo #${i + 1}: falta id`); continue; }
+    if (!type) { errors.push(`Nodo #${i + 1}: falta tipo`); continue; }
+    if (!label) { errors.push(`Nodo #${i + 1}: falta etiqueta`); continue; }
+
+    if (!validNodeTypeSet.has(type)) {
+      errors.push(`Nodo #${i + 1}: tipo "${type}" no existe en la configuración`);
+      continue;
+    }
+
+    if (tempIds.has(tempId)) {
+      errors.push(`Nodo #${i + 1}: id "${tempId}" duplicado`);
+      continue;
+    }
+    tempIds.add(tempId);
+
+    const parsed: ParsedNode = { tempId, type, label };
+
+    if (n.metadata && typeof n.metadata === 'object' && !Array.isArray(n.metadata)) {
+      parsed.metadata = n.metadata as Record<string, unknown>;
+    }
+    if (typeof n.positionX === 'number') parsed.positionX = n.positionX;
+    if (typeof n.positionY === 'number') parsed.positionY = n.positionY;
+    if (typeof n.color === 'string' && n.color) parsed.color = n.color;
+    if (typeof n.icon === 'string' && n.icon) parsed.icon = n.icon;
+
+    nodes.push(parsed);
+  }
+
+  // Parse edges
+  const rawEdges = data.edges;
+  if (Array.isArray(rawEdges)) {
+    for (let i = 0; i < rawEdges.length; i++) {
+      const raw = rawEdges[i];
+      if (typeof raw !== 'object' || raw === null) {
+        errors.push(`Conexión #${i + 1}: no es un objeto válido`);
+        continue;
+      }
+      const e = raw as Record<string, unknown>;
+
+      const sourceTemp = String(e.sourceId ?? e.sourceTemp ?? '').trim();
+      const targetTemp = String(e.targetId ?? e.targetTemp ?? '').trim();
+      const type = String(e.type ?? '').trim().toUpperCase();
+      const label = typeof e.label === 'string' ? e.label.trim() : undefined;
+
+      if (!sourceTemp) { errors.push(`Conexión #${i + 1}: falta origen`); continue; }
+      if (!targetTemp) { errors.push(`Conexión #${i + 1}: falta destino`); continue; }
+      if (!type) { errors.push(`Conexión #${i + 1}: falta tipo`); continue; }
+
+      if (!tempIds.has(sourceTemp)) {
+        errors.push(`Conexión #${i + 1}: origen "${sourceTemp}" no existe en nodos`);
+        continue;
+      }
+      if (!tempIds.has(targetTemp)) {
+        errors.push(`Conexión #${i + 1}: destino "${targetTemp}" no existe en nodos`);
+        continue;
+      }
+      if (!VALID_EDGE_TYPES.includes(type)) {
+        errors.push(`Conexión #${i + 1}: tipo "${type}" no válido`);
+        continue;
+      }
+
+      const parsed: ParsedEdge = { sourceTemp, targetTemp, type, label: label || undefined };
+
+      if (typeof e.weight === 'number') parsed.weight = e.weight;
+      if (typeof e.directed === 'boolean') parsed.directed = e.directed;
+      if (e.metadata && typeof e.metadata === 'object' && !Array.isArray(e.metadata)) {
+        parsed.metadata = e.metadata as Record<string, unknown>;
+      }
+      if (typeof e.color === 'string' && e.color) parsed.color = e.color;
+
+      edges.push(parsed);
+    }
+  }
+
+  return { nodes, edges, errors, graphMeta };
 }
 
 function parseNodesSheet(

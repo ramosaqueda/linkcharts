@@ -12,6 +12,10 @@ interface ImportNode {
   type: string;
   label: string;
   metadata?: Record<string, unknown>;
+  positionX?: number;
+  positionY?: number;
+  color?: string;
+  icon?: string;
 }
 
 interface ImportEdge {
@@ -19,6 +23,10 @@ interface ImportEdge {
   targetTemp: string;
   type: string;
   label?: string;
+  weight?: number;
+  directed?: boolean;
+  metadata?: Record<string, unknown>;
+  color?: string;
 }
 
 interface ImportBody {
@@ -113,9 +121,11 @@ export async function POST(request: Request) {
           graphId: graph.id,
           type: node.type,
           label: node.label,
-          positionX: X_OFFSET + col * X_SPACING,
-          positionY: Y_OFFSET + row * Y_SPACING,
+          positionX: node.positionX ?? (X_OFFSET + col * X_SPACING),
+          positionY: node.positionY ?? (Y_OFFSET + row * Y_SPACING),
           metadata: node.metadata ? (node.metadata as object) : undefined,
+          color: node.color || null,
+          icon: node.icon || null,
         },
       });
 
@@ -132,6 +142,10 @@ export async function POST(request: Request) {
           targetId: tempToRealId.get(edge.targetTemp)!,
           type: edge.type as typeof VALID_EDGE_TYPES[number],
           label: edge.label || null,
+          weight: edge.weight ?? null,
+          directed: edge.directed ?? true,
+          metadata: edge.metadata ? (edge.metadata as object) : undefined,
+          color: edge.color || null,
         })),
       });
     }

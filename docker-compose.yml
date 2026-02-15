@@ -1,0 +1,14 @@
+services:
+  linkcharts:
+    build: .
+    container_name: linkcharts
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DATABASE_URL=postgresql://postgres:r1101kcn@host.docker.internal:5432/graph_editor
+      - AUTH_SECRET=963962c744f61f93a6fe60008082af63fc88a8a86139a10715ef62527f195f11
+      - AUTH_URL=http://172.17.100.49:3005
+      - NODE_ENV=production

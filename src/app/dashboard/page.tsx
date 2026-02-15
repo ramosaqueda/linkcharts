@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import {
   Plus, Trash2, Calendar, Hash, X,
   LogOut, Globe, Lock, User, Settings, Users,
-  Upload, Download, FileSpreadsheet, AlertTriangle,
+  Upload, Download, FileSpreadsheet, FileJson, AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
 import type { GraphSummary } from '@/lib/types';
@@ -65,6 +65,12 @@ export default function DashboardPage() {
       const nodeTypes = typesRes.ok ? (await typesRes.json()).map((t: { name: string }) => t.name) : [];
       const result = await parseImportFile(file, nodeTypes);
       setImportPreview(result);
+      // Pre-fill form from JSON graph metadata (only if fields are empty)
+      if (result.graphMeta) {
+        if (result.graphMeta.name && !newName) setNewName(result.graphMeta.name);
+        if (result.graphMeta.description && !newDesc) setNewDesc(result.graphMeta.description);
+        if (result.graphMeta.caseNumber && !newCase) setNewCase(result.graphMeta.caseNumber);
+      }
     } catch {
       setImportError('No se pudo leer el archivo');
     }
@@ -396,7 +402,7 @@ export default function DashboardPage() {
                   type="text"
                   value={newCase}
                   onChange={(e) => setNewCase(e.target.value)}
-                  placeholder="CAU-2026-..."
+                  placeholder="2600-..."
                   className="w-full border rounded-lg px-3 py-2 text-xs outline-none focus:border-[var(--th-border-focus)] transition-colors font-mono"
                   style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)', color: 'var(--th-text-primary)' }}
                 />
@@ -445,7 +451,7 @@ export default function DashboardPage() {
                   >
                     <Upload size={20} className="mx-auto mb-2" style={{ color: 'var(--th-text-faint)' }} />
                     <p className="text-[11px]" style={{ color: 'var(--th-text-muted)' }}>
-                      Arrastra un archivo CSV o Excel aquí
+                      Arrastra un archivo CSV, Excel o JSON aquí
                     </p>
                     <p className="text-[10px] mt-1" style={{ color: 'var(--th-text-faint)' }}>
                       o haz clic para seleccionar
@@ -453,7 +459,7 @@ export default function DashboardPage() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".csv,.xls,.xlsx"
+                      accept=".csv,.xls,.xlsx,.json"
                       className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
@@ -465,7 +471,10 @@ export default function DashboardPage() {
                   <div className="border rounded-lg p-3" style={{ borderColor: 'var(--th-border)', backgroundColor: 'var(--th-bg-input)' }}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <FileSpreadsheet size={14} className="text-green-400" />
+                        {importFile.name.toLowerCase().endsWith('.json')
+                          ? <FileJson size={14} className="text-blue-400" />
+                          : <FileSpreadsheet size={14} className="text-green-400" />
+                        }
                         <span className="text-xs truncate max-w-[200px]" style={{ color: 'var(--th-text-primary)' }}>
                           {importFile.name}
                         </span>
