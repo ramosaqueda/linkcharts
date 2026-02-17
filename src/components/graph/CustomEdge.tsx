@@ -15,6 +15,7 @@ export type CustomEdgeData = {
   edgeType: EdgeType;
   dbId: string;
   label?: string | null;
+  highlighted?: boolean;
 };
 
 function CustomEdgeComponent({
@@ -48,9 +49,13 @@ function CustomEdgeComponent({
         path={edgePath}
         style={{
           stroke: color,
-          strokeWidth: selected ? 2.5 : 1.5,
+          strokeWidth: data.highlighted ? 3 : (selected ? 2.5 : 1.5),
           strokeDasharray: isDashed ? '6 4' : undefined,
-          filter: selected ? `drop-shadow(0 0 4px ${color}60)` : undefined,
+          filter: data.highlighted
+            ? `drop-shadow(0 0 6px ${color})`
+            : (selected ? `drop-shadow(0 0 4px ${color}60)` : undefined),
+          opacity: data.highlighted ? 1 : (selected ? 1 : 0.8),
+          zIndex: data.highlighted ? 10 : 0,
         }}
         markerEnd={`url(#marker-${edgeType})`}
         interactionWidth={20}

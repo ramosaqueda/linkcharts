@@ -27,6 +27,11 @@ let _isUndoRedoing = false;
 // Pre-drag position capture (set by GraphCanvas onNodeDragStart)
 let _dragStartPositions: Record<string, { x: number; y: number }> = {};
 
+interface PhotoModalState {
+  photoUrl: string;
+  label: string;
+}
+
 interface GraphStore {
   graph: Graph | null;
   nodes: DbNode[];
@@ -40,6 +45,12 @@ interface GraphStore {
   showTimeline: boolean;
   theme: ThemeId;
   nodeTypes: NodeTypeConfig[];
+  photoModal: PhotoModalState | null;
+
+  // Analysis state
+  showAnalysisPanel: boolean;
+  highlightedPath: string[] | null;
+  analysisSourceNodeId: string | null;
 
   // History state (reactive, for UI)
   historyIndex: number;
@@ -63,7 +74,14 @@ interface GraphStore {
   getNodeIcon: (type: string) => string;
   toggleMap: () => void;
   toggleTimeline: () => void;
+  toggleAnalysisPanel: () => void;
+  openAnalysisPanelWithSource: (nodeId: string) => void;
+  setHighlightedPath: (path: string[] | null) => void;
+  clearHighlightedPath: () => void;
+  clearAnalysisSourceNodeId: () => void;
   setTheme: (theme: ThemeId) => void;
+  openPhotoModal: (photoUrl: string, label: string) => void;
+  closePhotoModal: () => void;
 
   addNode: (graphId: string, type: NodeType, label: string, positionX: number, positionY: number, metadata?: Record<string, string>) => Promise<DbNode | null>;
   updateNode: (id: string, data: Partial<Pick<DbNode, 'label' | 'type' | 'positionX' | 'positionY' | 'metadata' | 'color' | 'icon'>>) => Promise<void>;
@@ -129,6 +147,12 @@ export const useGraphStore = create<GraphStore>((set, get) => {
     showTimeline: false,
     nodeTypes: [],
     theme: (typeof window !== 'undefined' ? localStorage.getItem('linkcharts-theme') as ThemeId : null) || 'dark',
+    photoModal: null,
+
+    // Analysis state
+    showAnalysisPanel: false,
+    highlightedPath: null,
+    analysisSourceNodeId: null,
 
     historyIndex: -1,
     historySize: 0,
@@ -184,6 +208,12 @@ export const useGraphStore = create<GraphStore>((set, get) => {
     },
     toggleMap: () => set((state) => ({ showMap: !state.showMap })),
     toggleTimeline: () => set((state) => ({ showTimeline: !state.showTimeline })),
+    toggleAnalysisPanel: () => set((state) => ({ showAnalysisPanel: !state.showAnalysisPanel })),
+    openAnalysisPanelWithSource: (nodeId) => set({ showAnalysisPanel: true, analysisSourceNodeId: nodeId }),
+    setHighlightedPath: (path) => set({ highlightedPath: path }),
+    clearHighlightedPath: () => set({ highlightedPath: null }),
+    clearAnalysisSourceNodeId: () => set({ analysisSourceNodeId: null }),
+
     setTheme: (theme) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('linkcharts-theme', theme);
@@ -191,6 +221,8 @@ export const useGraphStore = create<GraphStore>((set, get) => {
       }
       set({ theme });
     },
+    openPhotoModal: (photoUrl, label) => set({ photoModal: { photoUrl, label } }),
+    closePhotoModal: () => set({ photoModal: null }),
 
     setDragStartPositions: (positions) => {
       _dragStartPositions = positions;
@@ -610,7 +642,7 @@ export const useGraphStore = create<GraphStore>((set, get) => {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ positionX: p.x, positionY: p.y }),
-            }).catch(() => {})
+            }).catch(() => { })
           )
         );
       };

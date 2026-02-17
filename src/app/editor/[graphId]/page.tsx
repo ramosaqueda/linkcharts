@@ -10,6 +10,7 @@ import Toolbar from '@/components/ui/Toolbar';
 import DetailPanel from '@/components/ui/DetailPanel';
 import MapPanel from '@/components/map/MapPanel';
 import TimelinePanel from '@/components/timeline/TimelinePanel';
+import AnalysisPanel from '@/components/analysis/AnalysisPanel';
 import { ArrowLeft, Globe, Lock, Eye, Users } from 'lucide-react';
 import CollaboratorModal from '@/components/ui/CollaboratorModal';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -24,7 +25,7 @@ export default function EditorPage() {
     deleteNode, deleteEdge,
     setSelectedNode, setSelectedEdge,
     undo, redo,
-    showMap, showTimeline,
+    showMap, showTimeline, showAnalysisPanel,
     fetchNodeTypes,
   } = useGraphStore();
   const [loading, setLoading] = useState(true);
@@ -247,11 +248,10 @@ export default function EditorPage() {
             {(isOwner || isAdmin) && (
               <button
                 onClick={handleTogglePublic}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs backdrop-blur-xl border rounded-lg transition-colors font-mono ${
-                  isPublic
-                    ? 'text-green-400 bg-green-950/50 border-green-700/50 hover:bg-green-950/70'
-                    : ''
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs backdrop-blur-xl border rounded-lg transition-colors font-mono ${isPublic
+                  ? 'text-green-400 bg-green-950/50 border-green-700/50 hover:bg-green-950/70'
+                  : ''
+                  }`}
                 style={!isPublic ? { color: 'var(--th-text-muted)', backgroundColor: 'var(--th-bg-overlay-light)', borderColor: 'var(--th-border)' } : undefined}
                 title={isPublic ? 'Público — clic para hacer privado' : 'Privado — clic para hacer público'}
               >
@@ -264,6 +264,7 @@ export default function EditorPage() {
           <Toolbar readOnly={!canEdit} />
           <GraphCanvas readOnly={!canEdit} />
           <DetailPanel readOnly={!canEdit} />
+          {showAnalysisPanel && <AnalysisPanel />}
         </div>
 
         {(showMap || showTimeline) && (

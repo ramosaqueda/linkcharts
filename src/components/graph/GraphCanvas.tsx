@@ -26,11 +26,12 @@ import EdgeMarkers from './EdgeMarkers';
 import { useGraphStore } from '@/lib/store';
 import type { Node as DbNode, Edge as DbEdge } from '@/lib/types';
 import ContextMenu from '../ui/ContextMenu';
+import PhotoModal from '../ui/PhotoModal';
 
 const nodeTypes = { custom: CustomNodeComponent };
 const edgeTypes = { custom: CustomEdgeComponent };
 
-function dbNodeToRF(node: DbNode): RFNode {
+function dbNodeToRF(node: DbNode, highlightedPath: string[] | null): RFNode {
   return {
     id: node.id,
     type: 'custom',
@@ -41,21 +42,29 @@ function dbNodeToRF(node: DbNode): RFNode {
       nodeType: node.type,
       dbId: node.id,
       metadata: node.metadata,
+      highlighted: highlightedPath?.includes(node.id),
     } as CustomNodeData,
   };
 }
 
-function dbEdgeToRF(edge: DbEdge): RFEdge {
+function dbEdgeToRF(edge: DbEdge, highlightedPath: string[] | null): RFEdge {
+  // Highlight edge if BOTH source and target are in highlightedPath
+  const isHighlighted = highlightedPath
+    ? (highlightedPath.includes(edge.sourceId) && highlightedPath.includes(edge.targetId))
+    : false;
+
   return {
     id: edge.id,
     source: edge.sourceId,
     target: edge.targetId,
     type: 'custom',
     markerEnd: `marker-${edge.type}`,
+    zIndex: isHighlighted ? 10 : 0,
     data: {
       edgeType: edge.type,
       dbId: edge.id,
       label: edge.label,
+      highlighted: isHighlighted,
     } as CustomEdgeData,
   };
 }
@@ -76,6 +85,9 @@ function GraphCanvasInner({ readOnly = false }: { readOnly?: boolean }) {
     updateNode,
     hiddenNodeTypes,
     setDragStartPositions,
+    photoModal,
+    closePhotoModal,
+    highlightedPath, // Destructure highlightedPath
   } = store;
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState<RFNode>([]);
@@ -94,14 +106,14 @@ function GraphCanvasInner({ readOnly = false }: { readOnly?: boolean }) {
   // Sync DB state -> RF state (with type filter)
   useEffect(() => {
     const visibleNodes = dbNodes.filter((n) => !hiddenNodeTypes.has(n.type));
-    setRfNodes(visibleNodes.map(dbNodeToRF));
-  }, [dbNodes, hiddenNodeTypes, setRfNodes]);
+    setRfNodes(visibleNodes.map(n => dbNodeToRF(n, highlightedPath)));
+  }, [dbNodes, hiddenNodeTypes, setRfNodes, highlightedPath]);
 
   useEffect(() => {
     const visibleNodeIds = new Set(dbNodes.filter((n) => !hiddenNodeTypes.has(n.type)).map((n) => n.id));
     const visibleEdges = dbEdges.filter((e) => visibleNodeIds.has(e.sourceId) && visibleNodeIds.has(e.targetId));
-    setRfEdges(visibleEdges.map(dbEdgeToRF));
-  }, [dbEdges, dbNodes, hiddenNodeTypes, setRfEdges]);
+    setRfEdges(visibleEdges.map(e => dbEdgeToRF(e, highlightedPath)));
+  }, [dbEdges, dbNodes, hiddenNodeTypes, setRfEdges, highlightedPath]);
 
   // Fit view on first load
   useEffect(() => {
@@ -297,6 +309,13 @@ function GraphCanvasInner({ readOnly = false }: { readOnly?: boolean }) {
           canvasY={contextMenu.y}
           nodeId={contextMenu.nodeId}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+      {photoModal && (
+        <PhotoModal
+          photoUrl={photoModal.photoUrl}
+          label={photoModal.label}
+          onClose={closePhotoModal}
         />
       )}
     </div>

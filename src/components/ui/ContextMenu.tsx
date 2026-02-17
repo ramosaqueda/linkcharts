@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Copy, Trash2, Link, Pencil, ClipboardPaste } from 'lucide-react';
+import { Copy, Trash2, Link, Pencil, ClipboardPaste, GitCommitHorizontal } from 'lucide-react';
 import { useGraphStore } from '@/lib/store';
 import { getIconComponent } from '@/lib/icon-map';
 import { useReactFlow } from '@xyflow/react';
@@ -17,7 +17,7 @@ interface Props {
 
 export default function ContextMenu({ x, y, canvasX, canvasY, nodeId, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const { graph, addNode, deleteNode, nodes, setClipboard, clipboard, setSelectedNode, setMode, nodeTypes, getNodeLabel } = useGraphStore();
+  const { graph, addNode, deleteNode, nodes, setClipboard, clipboard, setSelectedNode, setMode, nodeTypes, getNodeLabel, openAnalysisPanelWithSource } = useGraphStore();
   const { screenToFlowPosition } = useReactFlow();
 
   useEffect(() => {
@@ -81,6 +81,13 @@ export default function ContextMenu({ x, y, canvasX, canvasY, nodeId, onClose }:
     onClose();
   };
 
+  const handleAnalyzeConnections = () => {
+    if (nodeId) {
+      openAnalysisPanelWithSource(nodeId);
+    }
+    onClose();
+  };
+
   const menuStyle: React.CSSProperties = {
     position: 'fixed',
     left: x,
@@ -102,6 +109,9 @@ export default function ContextMenu({ x, y, canvasX, canvasY, nodeId, onClose }:
         </button>
         <button onClick={handleStartConnect} className="th-menu-item flex items-center gap-2 w-full px-3 py-2 text-left transition-colors">
           <Link size={14} /> Conectar desde aquí
+        </button>
+        <button onClick={handleAnalyzeConnections} className="th-menu-item flex items-center gap-2 w-full px-3 py-2 text-left transition-colors">
+          <GitCommitHorizontal size={14} /> Analizar conexiones
         </button>
         <div className="border-t my-1" style={{ borderColor: 'var(--th-border)' }} />
         <button onClick={handleDeleteNode} className="flex items-center gap-2 w-full px-3 py-2 text-left text-red-400 hover:bg-red-950/50 hover:text-red-300 transition-colors">

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   MousePointer2, Spline, Plus, Search, Download, ImageDown,
   ChevronDown, Filter, Eye, EyeOff, Undo2, Redo2,
-  LayoutGrid, Map, Clock,
+  LayoutGrid, Map, Clock, GitCommitHorizontal,
 } from 'lucide-react';
 import { useGraphStore } from '@/lib/store';
 import { getIconComponent } from '@/lib/icon-map';
@@ -12,7 +12,7 @@ import { useReactFlow } from '@xyflow/react';
 import ThemeSelector from './ThemeSelector';
 
 export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
-  const { mode, setMode, graph, nodes, edges, addNode, hiddenNodeTypes, toggleNodeTypeVisibility, showAllNodeTypes, hideAllNodeTypes, canUndo, canRedo, undo, redo, applyLayout, showMap, toggleMap, showTimeline, toggleTimeline, nodeTypes, getNodeColor, getNodeLabel, getNodeIcon } = useGraphStore();
+  const { mode, setMode, graph, nodes, edges, addNode, hiddenNodeTypes, toggleNodeTypeVisibility, showAllNodeTypes, hideAllNodeTypes, canUndo, canRedo, undo, redo, applyLayout, showMap, toggleMap, showTimeline, toggleTimeline, showAnalysisPanel, toggleAnalysisPanel, nodeTypes, getNodeColor, getNodeLabel, getNodeIcon } = useGraphStore();
   const { setCenter, getZoom } = useReactFlow();
 
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -134,11 +134,10 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
         <div className="flex items-center rounded-lg p-0.5" style={{ backgroundColor: 'var(--th-bg-input)' }}>
           <button
             onClick={() => setMode('select')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${
-              mode === 'select'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                : ''
-            }`}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${mode === 'select'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+              : ''
+              }`}
             style={mode !== 'select' ? { color: 'var(--th-text-muted)' } : undefined}
             title="Modo selección"
           >
@@ -147,11 +146,10 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
           </button>
           <button
             onClick={() => setMode('connect')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${
-              mode === 'connect'
-                ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
-                : ''
-            }`}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${mode === 'connect'
+              ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
+              : ''
+              }`}
             style={mode !== 'connect' ? { color: 'var(--th-text-muted)' } : undefined}
             title="Modo conexión"
           >
@@ -252,11 +250,10 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
       <div className="relative" ref={filterMenuRef}>
         <button
           onClick={() => setShowFilterMenu(!showFilterMenu)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
-            hiddenNodeTypes.size > 0
-              ? 'text-amber-400 bg-amber-950/40 border border-amber-700/50'
-              : ''
-          }`}
+          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${hiddenNodeTypes.size > 0
+            ? 'text-amber-400 bg-amber-950/40 border border-amber-700/50'
+            : ''
+            }`}
           style={hiddenNodeTypes.size === 0 ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
           title="Filtrar por tipo"
         >
@@ -296,9 +293,8 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
                 <button
                   key={nt.name}
                   onClick={() => toggleNodeTypeVisibility(nt.name)}
-                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors ${
-                    isHidden ? '' : 'th-menu-item'
-                  }`}
+                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors ${isHidden ? '' : 'th-menu-item'
+                    }`}
                   style={isHidden ? { color: 'var(--th-text-faint)' } : undefined}
                 >
                   {isHidden ? <EyeOff size={12} style={{ color: 'var(--th-text-faint)' }} /> : <Eye size={12} style={{ color: 'var(--th-text-muted)' }} />}
@@ -368,11 +364,10 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
       {/* Map toggle */}
       <button
         onClick={toggleMap}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
-          showMap
-            ? 'text-blue-400 bg-blue-950/40 border border-blue-700/50'
-            : ''
-        }`}
+        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showMap
+          ? 'text-blue-400 bg-blue-950/40 border border-blue-700/50'
+          : ''
+          }`}
         style={!showMap ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
         title="Mapa de geolocalización"
       >
@@ -397,11 +392,10 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
       {/* Timeline toggle */}
       <button
         onClick={toggleTimeline}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
-          showTimeline
-            ? 'text-orange-400 bg-orange-950/40 border border-orange-700/50'
-            : ''
-        }`}
+        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showTimeline
+          ? 'text-orange-400 bg-orange-950/40 border border-orange-700/50'
+          : ''
+          }`}
         style={!showTimeline ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
         title="Línea temporal"
       >
@@ -418,6 +412,20 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
             </span>
           ) : null;
         })()}
+      </button>
+
+      {/* Analysis toggle */}
+      <button
+        onClick={toggleAnalysisPanel}
+        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showAnalysisPanel
+            ? 'text-purple-400 bg-purple-950/40 border border-purple-700/50'
+            : ''
+          }`}
+        style={!showAnalysisPanel ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
+        title="Panel de Análisis (Shortest Path)"
+      >
+        <GitCommitHorizontal size={14} />
+        <span className="hidden sm:inline">Análisis</span>
       </button>
 
       {/* Theme selector */}

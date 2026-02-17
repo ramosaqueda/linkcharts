@@ -17,6 +17,7 @@ Editor visual de grafos relacionales orientado a inteligencia criminal y anális
 - **Auth**: next-auth@beta con Credentials provider, JWT strategy
 - **Importación**: xlsx (SheetJS) para CSV/XLS/XLSX
 - **Fuente monospace**: JetBrains Mono (Google Fonts)
+- **Análisis de Grafos**: graphology, graphology-shortest-path, graphology-metrics, graphology-communities-louvain
 
 ## Modelo de Datos (Prisma Schema)
 
@@ -197,6 +198,7 @@ Todas las rutas manejan errores con try/catch y retornan NextResponse.json con s
 12. Tipos de nodo dinámicos (admin configurable)
 13. Colaboradores por grafo
 14. **Importación CSV/XLS/XLSX** al crear grafo (con plantilla descargable)
+15. **Herramientas de Análisis** (Panel de algoritmos, Shortest Path, Centrality, Community Detection, Highlighting)
 
 ## Importación CSV/XLS (Fase reciente)
 
@@ -204,6 +206,20 @@ Todas las rutas manejan errores con try/catch y retornan NextResponse.json con s
 - `src/lib/import-parser.ts` — `parseImportFile(file, validNodeTypes)` lee archivo con SheetJS, busca hojas "Nodos"/"Conexiones", valida y retorna `{ nodes, edges, errors }`
 - `src/lib/import-template.ts` — `downloadTemplate()` genera XLSX con hojas de ejemplo
 - Dashboard: modal crear grafo tiene dropzone, preview, validación inline, botón "Crear e importar"
+
+## Herramientas de Análisis de Grafos
+
+Sistema integrado para obtener insights de redes criminales mediante algoritmos:
+
+- **Panel de Análisis**: Accesible vía Toolbar o menú contextual de nodo ("Analizar conexiones").
+- **Algoritmos Disponibles**:
+  - **Shortest Path**: Camino más corto entre dos nodos (bidireccional). Visualización de la ruta en el canvas.
+  - **Degree Centrality**: Identifica Hubs (nodos con mayor número de conexiones directas). Muestra Top 10.
+  - **Betweenness Centrality**: Identifica Brokers/Puentes (nodos que conectan grupos disjuntos). Muestra Top 10.
+  - **Community Detection (Louvain)**: Agrupa nodos densamente conectados. Lista de comunidades y resalte visual.
+- **Visualización**:
+  - **Highlighting**: Nodos y edges resaltados tienen mayor z-index, borde grueso, brillo y opacidad plena.
+  - **Feedback**: Listas interactivas en el panel con scores y tamaños de grupo.
 
 ## Desarrollo
 
