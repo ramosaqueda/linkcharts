@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, ArrowLeft, Camera, ExternalLink, GitCommitHorizontal } from 'lucide-react';
 import type { EdgeType } from '@/lib/types';
 import { EDGE_COLORS, EDGE_LABELS } from '@/lib/constants';
 import { useGraphStore } from '@/lib/store';
@@ -18,6 +18,7 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
     updateNode, updateEdge, deleteNode, deleteEdge,
     setSelectedNode, setSelectedEdge,
     nodeTypes, getNodeColor, getNodeLabel,
+    openPhotoModal,
   } = useGraphStore();
 
   const selectedNode = selectedNodeId ? nodes.find((n) => n.id === selectedNodeId) : null;
@@ -30,6 +31,7 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [nodeDate, setNodeDate] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Sync state when selection changes
@@ -41,8 +43,9 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
       setLatitude(meta.latitude || '');
       setLongitude(meta.longitude || '');
       setNodeDate(meta.date || '');
+      setPhotoUrl(meta.photoUrl || '');
       const filteredMeta = Object.entries(meta)
-        .filter(([key]) => key !== 'latitude' && key !== 'longitude' && key !== 'date')
+        .filter(([key]) => key !== 'latitude' && key !== 'longitude' && key !== 'date' && key !== 'photoUrl')
         .map(([key, value]) => ({ key, value }));
       setMetadata(filteredMeta);
       setShowDeleteConfirm(false);
@@ -66,8 +69,9 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
     if (latitude.trim()) meta.latitude = latitude.trim();
     if (longitude.trim()) meta.longitude = longitude.trim();
     if (nodeDate.trim()) meta.date = nodeDate.trim();
+    if (photoUrl.trim()) meta.photoUrl = photoUrl.trim();
     updateNode(selectedNode.id, { label, type: nodeType, metadata: meta });
-  }, [selectedNode, label, nodeType, metadata, latitude, longitude, nodeDate, updateNode]);
+  }, [selectedNode, label, nodeType, metadata, latitude, longitude, nodeDate, photoUrl, updateNode]);
 
   const handleSaveEdge = useCallback(() => {
     if (!selectedEdge) return;
@@ -102,7 +106,7 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
       : '#a855f7';
 
   return (
-    <div className="absolute top-0 right-0 h-full w-80 backdrop-blur-2xl border-l z-40 shadow-2xl animate-slideIn overflow-y-auto font-mono" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
+    <div className="absolute top-0 right-0 h-full w-1/4 backdrop-blur-2xl border-l z-40 shadow-2xl animate-slideIn overflow-y-auto font-mono" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--th-border)' }}>
         <div className="flex items-center gap-2">
@@ -276,6 +280,52 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
           </div>
         )}
 
+        {/* Photo URL field for nodes */}
+        {selectedNode && (
+          <div>
+            <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--th-text-dimmed)' }}>
+              <Camera size={10} className="inline mr-1" />
+              Fotografía (URL)
+            </label>
+            <div className="flex gap-1.5">
+              <input
+                type="url"
+                placeholder="https://ejemplo.com/foto.jpg"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                onBlur={handleSaveNode}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNode(); }}
+                disabled={readOnly}
+                className="flex-1 border rounded px-2 py-1.5 text-[11px] outline-none focus:border-[var(--th-border-focus)] transition-colors font-mono disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)', color: 'var(--th-text-primary)' }}
+              />
+              {photoUrl && (
+                <button
+                  onClick={() => openPhotoModal(photoUrl, selectedNode.label)}
+                  className="px-2 py-1.5 border rounded transition-colors hover:bg-[var(--th-bg-tertiary)]"
+                  style={{ borderColor: 'var(--th-border)', color: 'var(--th-text-muted)' }}
+                  title="Ver foto"
+                >
+                  <ExternalLink size={12} />
+                </button>
+              )}
+            </div>
+            {photoUrl && (
+              <div className="mt-2 rounded overflow-hidden border" style={{ borderColor: 'var(--th-border)' }}>
+                <img
+                  src={photoUrl}
+                  alt={selectedNode.label}
+                  className="w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => openPhotoModal(photoUrl, selectedNode.label)}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Metadata editor for nodes */}
         {selectedNode && (
           <div>
@@ -386,41 +436,57 @@ export default function DetailPanel({ readOnly = false }: { readOnly?: boolean }
           </div>
         )}
 
+        {/* Analysis Shortcuts */}
+        {selectedNode && !readOnly && (
+          <div className="pt-2 border-t" style={{ borderColor: 'var(--th-border)' }}>
+            <button
+              onClick={() => {
+                const { showAnalysisPanel, toggleAnalysisPanel } = useGraphStore.getState();
+                if (!showAnalysisPanel) toggleAnalysisPanel();
+              }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-purple-400 hover:bg-purple-950/30 rounded-lg transition-colors border border-dashed border-purple-900/50"
+            >
+              <GitCommitHorizontal size={14} />
+              Analizar conexiones
+            </button>
+          </div>
+        )}
+
         {/* Delete */}
         {!readOnly && (
-        <div className="pt-2 border-t" style={{ borderColor: 'var(--th-border)' }}>
-          {!showDeleteConfirm ? (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 rounded-lg transition-colors"
-            >
-              <Trash2 size={14} />
-              Eliminar {selectedNode ? 'nodo' : 'conexión'}
-            </button>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-[11px] text-red-400">
-                {selectedNode
-                  ? 'Se eliminarán todas las conexiones asociadas.'
-                  : '¿Confirmar eliminación?'}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDelete}
-                  className="flex-1 px-3 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                >
-                  Confirmar
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="th-btn-secondary flex-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
+          <div className="pt-2 border-t" style={{ borderColor: 'var(--th-border)' }}>
+            {!showDeleteConfirm ? (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-400 hover:bg-red-950/30 rounded-lg transition-colors"
+              >
+                <Trash2 size={14} />
+                Eliminar {selectedNode ? 'nodo' : 'conexión'}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[11px] text-red-400">
+                  {selectedNode
+                    ? 'Se eliminarán todas las conexiones asociadas.'
+                    : '¿Confirmar eliminación?'}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDelete}
+                    className="flex-1 px-3 py-1.5 text-xs text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="th-btn-secondary flex-1 px-3 py-1.5 text-xs rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
       </div>
     </div>
