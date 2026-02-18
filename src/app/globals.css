@@ -353,6 +353,102 @@ select option {
   background: var(--th-leaflet-bg) !important;
 }
 
+/* Leaflet layers control - dark theme */
+.leaflet-control-layers {
+  background: var(--th-bg-overlay) !important;
+  border: 1px solid var(--th-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(12px);
+}
+
+.leaflet-control-layers-toggle {
+  background-color: var(--th-bg-overlay) !important;
+  border: 1px solid var(--th-border) !important;
+  border-radius: 6px !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.leaflet-control-layers-expanded {
+  padding: 8px 12px !important;
+  color: var(--th-text-primary) !important;
+}
+
+.leaflet-control-layers-list {
+  font-family: var(--font-mono), monospace !important;
+  font-size: 11px !important;
+}
+
+.leaflet-control-layers-base label,
+.leaflet-control-layers-overlays label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 4px 0 !important;
+  color: var(--th-text-secondary) !important;
+  cursor: pointer !important;
+  transition: color 0.15s !important;
+}
+
+.leaflet-control-layers-base label:hover,
+.leaflet-control-layers-overlays label:hover {
+  color: var(--th-text-primary) !important;
+}
+
+.leaflet-control-layers-selector {
+  accent-color: var(--th-accent) !important;
+  margin-right: 0 !important;
+}
+
+.leaflet-control-layers-separator {
+  border-top-color: var(--th-border) !important;
+  margin: 6px 0 !important;
+}
+
+/* Leaflet zoom control - dark theme */
+.leaflet-control-zoom {
+  border: 1px solid var(--th-border) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background-color: var(--th-bg-overlay) !important;
+  color: var(--th-text-primary) !important;
+  border-bottom-color: var(--th-border) !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 16px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: var(--th-bg-hover) !important;
+}
+
+.leaflet-control-zoom a.leaflet-disabled {
+  background-color: var(--th-bg-tertiary) !important;
+  color: var(--th-text-faint) !important;
+}
+
+/* Leaflet attribution - dark theme */
+.leaflet-control-attribution {
+  background: var(--th-bg-overlay) !important;
+  color: var(--th-text-dimmed) !important;
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px 0 0 0 !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--th-text-muted) !important;
+}
+
+.leaflet-control-attribution a:hover {
+  color: var(--th-accent) !important;
+}
+
 /* Sidebar animations */
 @keyframes slideInLeft {
   from {
