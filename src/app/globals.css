@@ -352,3 +352,164 @@ select option {
 .leaflet-container {
   background: var(--th-leaflet-bg) !important;
 }
+
+/* Sidebar animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.2s ease-out;
+}
+
+/* Sidebar styles */
+.sidebar-collapsed {
+  width: 52px;
+}
+
+.sidebar-expanded {
+  width: 240px;
+}
+
+.sidebar-transition {
+  transition: width 0.2s ease-out;
+}
+
+/* Sidebar menu item */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--th-text-secondary);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-item:hover {
+  background-color: var(--th-bg-hover);
+  color: var(--th-text-primary);
+}
+
+.sidebar-item.active {
+  background-color: var(--th-accent);
+  color: var(--th-text-on-accent);
+}
+
+.sidebar-item-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-item-label {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.sidebar-expanded .sidebar-item-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Sidebar divider */
+.sidebar-divider {
+  height: 1px;
+  margin: 8px 12px;
+  background-color: var(--th-border);
+}
+
+/* Sidebar section title */
+.sidebar-section-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--th-text-faint);
+  padding: 4px 12px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-expanded .sidebar-section-title {
+  opacity: 1;
+}
+
+/* Sidebar submenu */
+.sidebar-submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
+.sidebar-submenu.open {
+  max-height: 500px;
+}
+
+/* Tooltip for collapsed state */
+.sidebar-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  padding: 6px 10px;
+  background-color: var(--th-bg-overlay);
+  border: 1px solid var(--th-border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--th-text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+
+.sidebar-collapsed .sidebar-item:hover .sidebar-tooltip {
+  opacity: 1;
+}
+
+/* Sidebar badge count */
+.sidebar-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 8px;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: white;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}

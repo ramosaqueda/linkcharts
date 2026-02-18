@@ -204,11 +204,11 @@ export default function EditorPage() {
     <ReactFlowProvider>
       <div className="h-screen w-screen overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--th-bg-primary)' }}>
         <div className="flex-1 relative overflow-hidden min-h-0">
-          {/* Back button */}
+          {/* Back button - positioned to avoid sidebar */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="absolute top-4 left-4 z-50 flex items-center gap-1.5 px-3 py-1.5 text-xs backdrop-blur-xl border rounded-lg transition-colors font-mono"
-            style={{ color: 'var(--th-text-muted)', backgroundColor: 'var(--th-bg-overlay-light)', borderColor: 'var(--th-border)' }}
+            className="absolute top-4 z-40 flex items-center gap-1.5 px-3 py-1.5 text-xs backdrop-blur-xl border rounded-lg transition-colors font-mono"
+            style={{ left: '64px', color: 'var(--th-text-muted)', backgroundColor: 'var(--th-bg-overlay-light)', borderColor: 'var(--th-border)' }}
           >
             <ArrowLeft size={14} />
             Dashboard

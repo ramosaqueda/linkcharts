@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   MousePointer2, Spline, Plus, Search, Download, ImageDown,
-  ChevronDown, Filter, Eye, EyeOff, Undo2, Redo2,
-  LayoutGrid, Map, Clock, GitCommitHorizontal,
+  ChevronRight, ChevronLeft, Filter, Eye, EyeOff, Undo2, Redo2,
+  LayoutGrid, Map, Clock, GitCommitHorizontal, Menu, X,
+  ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useGraphStore } from '@/lib/store';
 import { getIconComponent } from '@/lib/icon-map';
@@ -12,37 +13,52 @@ import { useReactFlow } from '@xyflow/react';
 import ThemeSelector from './ThemeSelector';
 
 export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
-  const { mode, setMode, graph, nodes, edges, addNode, hiddenNodeTypes, toggleNodeTypeVisibility, showAllNodeTypes, hideAllNodeTypes, canUndo, canRedo, undo, redo, applyLayout, showMap, toggleMap, showTimeline, toggleTimeline, showAnalysisPanel, toggleAnalysisPanel, nodeTypes, getNodeColor, getNodeLabel, getNodeIcon } = useGraphStore();
+  const {
+    mode, setMode, graph, nodes, edges, addNode,
+    hiddenNodeTypes, toggleNodeTypeVisibility, showAllNodeTypes, hideAllNodeTypes,
+    canUndo, canRedo, undo, redo, applyLayout,
+    showMap, toggleMap, showTimeline, toggleTimeline,
+    showAnalysisPanel, toggleAnalysisPanel,
+    nodeTypes, getNodeColor, getNodeLabel, getNodeIcon,
+  } = useGraphStore();
   const { setCenter, getZoom } = useReactFlow();
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showLayoutMenu, setShowLayoutMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<typeof nodes>([]);
-  const addMenuRef = useRef<HTMLDivElement>(null);
-  const layoutMenuRef = useRef<HTMLDivElement>(null);
-  const filterMenuRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-collapse on mouse leave (if not pinned)
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsExpanded(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isPinned) return;
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsExpanded(false);
+      setShowAddMenu(false);
+      setShowLayoutMenu(false);
+      setShowFilterMenu(false);
+    }, 300);
+  }, [isPinned]);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as HTMLElement)) {
-        setShowAddMenu(false);
-      }
-      if (layoutMenuRef.current && !layoutMenuRef.current.contains(e.target as HTMLElement)) {
-        setShowLayoutMenu(false);
-      }
-      if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as HTMLElement)) {
-        setShowFilterMenu(false);
-      }
-      if (searchRef.current && !searchRef.current.contains(e.target as HTMLElement)) {
-        setShowSearch(false);
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
   useEffect(() => {
@@ -107,329 +123,390 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'f') {
         e.preventDefault();
-        const input = document.getElementById('node-search-input');
-        input?.focus();
+        setIsExpanded(true);
+        setIsPinned(true);
+        setTimeout(() => {
+          const input = document.getElementById('node-search-input');
+          input?.focus();
+        }, 100);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const geoCount = nodes.filter((n) => {
+    const meta = n.metadata as Record<string, string> | null;
+    if (!meta) return false;
+    const lat = parseFloat(meta.latitude);
+    const lng = parseFloat(meta.longitude);
+    return !isNaN(lat) && !isNaN(lng);
+  }).length;
+
+  const dateCount = nodes.filter((n) => {
+    const meta = n.metadata as Record<string, string> | null;
+    return meta?.date && !isNaN(new Date(meta.date).getTime());
+  }).length;
+
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-2 backdrop-blur-xl border rounded-xl shadow-2xl font-mono" style={{ backgroundColor: 'var(--th-bg-overlay-light)', borderColor: 'var(--th-border)' }}>
-      {/* Case info */}
-      {graph && (
-        <div className="flex items-center gap-2 pr-3 border-r" style={{ borderColor: 'var(--th-border)' }}>
-          <span className="text-xs font-medium truncate max-w-[120px]" style={{ color: 'var(--th-text-primary)' }}>{graph.name}</span>
-          {graph.caseNumber && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: 'var(--th-text-muted)', backgroundColor: 'var(--th-bg-input)' }}>
-              {graph.caseNumber}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Mode toggle */}
-      {!readOnly && (
-        <div className="flex items-center rounded-lg p-0.5" style={{ backgroundColor: 'var(--th-bg-input)' }}>
-          <button
-            onClick={() => setMode('select')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${mode === 'select'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-              : ''
-              }`}
-            style={mode !== 'select' ? { color: 'var(--th-text-muted)' } : undefined}
-            title="Modo selección"
-          >
-            <MousePointer2 size={14} />
-            <span className="hidden sm:inline">Seleccionar</span>
-          </button>
-          <button
-            onClick={() => setMode('connect')}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-all ${mode === 'connect'
-              ? 'bg-green-600 text-white shadow-lg shadow-green-600/30'
-              : ''
-              }`}
-            style={mode !== 'connect' ? { color: 'var(--th-text-muted)' } : undefined}
-            title="Modo conexión"
-          >
-            <Spline size={14} />
-            <span className="hidden sm:inline">Conectar</span>
-          </button>
-        </div>
-      )}
-
-      {/* Undo / Redo */}
-      {!readOnly && (
-        <div className="flex items-center gap-0.5 pr-2 border-r" style={{ borderColor: 'var(--th-border)' }}>
-          <button
-            onClick={() => undo()}
-            disabled={!canUndo}
-            className="th-btn-ghost flex items-center justify-center w-7 h-7 rounded-md text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Deshacer (Ctrl+Z)"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            onClick={() => redo()}
-            disabled={!canRedo}
-            className="th-btn-ghost flex items-center justify-center w-7 h-7 rounded-md text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Rehacer (Ctrl+Shift+Z)"
-          >
-            <Redo2 size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Layout dropdown */}
-      {!readOnly && (
-        <div className="relative" ref={layoutMenuRef}>
-          <button
-            onClick={() => setShowLayoutMenu(!showLayoutMenu)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors" style={{ color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' }}
-            title="Layout automático"
-          >
-            <LayoutGrid size={14} />
-            <span className="hidden sm:inline">Layout</span>
-            <ChevronDown size={10} />
-          </button>
-          {showLayoutMenu && (
-            <div className="absolute top-full mt-1 left-0 backdrop-blur-xl border rounded-lg shadow-2xl py-1 min-w-[200px] z-50" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
-              {([
-                { dir: 'TB' as const, label: 'Arriba \u2192 Abajo', icon: '\u2193' },
-                { dir: 'LR' as const, label: 'Izquierda \u2192 Derecha', icon: '\u2192' },
-                { dir: 'BT' as const, label: 'Abajo \u2192 Arriba', icon: '\u2191' },
-                { dir: 'RL' as const, label: 'Derecha \u2192 Izquierda', icon: '\u2190' },
-              ]).map(({ dir, label, icon }) => (
-                <button
-                  key={dir}
-                  onClick={() => { applyLayout(dir); setShowLayoutMenu(false); }}
-                  className="th-menu-item flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors"
-                >
-                  <span className="w-4 text-center text-sm">{icon}</span>
-                  {label}
-                </button>
-              ))}
+    <div
+      ref={sidebarRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`absolute left-0 top-0 h-full z-50 flex flex-col backdrop-blur-xl border-r shadow-2xl font-mono sidebar-transition ${
+        isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'
+      }`}
+      style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-3 border-b" style={{ borderColor: 'var(--th-border)' }}>
+        {isExpanded ? (
+          <>
+            <div className="flex items-center gap-2 min-w-0">
+              <Menu size={18} style={{ color: 'var(--th-text-muted)' }} className="flex-shrink-0" />
+              <span className="text-xs font-medium truncate" style={{ color: 'var(--th-text-primary)' }}>
+                {graph?.name || 'Grafo'}
+              </span>
             </div>
-          )}
+            <button
+              onClick={() => setIsPinned(!isPinned)}
+              className="p-1 rounded transition-colors hover:bg-[var(--th-bg-hover)]"
+              title={isPinned ? 'Desfijar menú' : 'Fijar menú abierto'}
+            >
+              {isPinned ? (
+                <X size={14} style={{ color: 'var(--th-text-muted)' }} />
+              ) : (
+                <ChevronLeft size={14} style={{ color: 'var(--th-text-muted)' }} />
+              )}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => { setIsExpanded(true); setIsPinned(true); }}
+            className="w-full flex justify-center p-1"
+          >
+            <ChevronRight size={18} style={{ color: 'var(--th-text-muted)' }} />
+          </button>
+        )}
+      </div>
+
+      {/* Case info badge */}
+      {graph?.caseNumber && isExpanded && (
+        <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--th-border)' }}>
+          <span className="text-[10px] px-2 py-1 rounded" style={{ color: 'var(--th-text-muted)', backgroundColor: 'var(--th-bg-input)' }}>
+            Caso: {graph.caseNumber}
+          </span>
         </div>
       )}
 
-      {/* Add node dropdown */}
-      {!readOnly && (
-        <div className="relative" ref={addMenuRef}>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto py-2">
+        {/* Mode selection */}
+        {!readOnly && (
+          <>
+            {isExpanded && <div className="sidebar-section-title">Modo</div>}
+            <div className="px-2 space-y-1">
+              <button
+                onClick={() => setMode('select')}
+                className={`sidebar-item w-full relative ${mode === 'select' ? 'active' : ''}`}
+              >
+                <span className="sidebar-item-icon"><MousePointer2 size={16} /></span>
+                <span className="sidebar-item-label">Seleccionar</span>
+                {!isExpanded && <span className="sidebar-tooltip">Seleccionar</span>}
+              </button>
+              <button
+                onClick={() => setMode('connect')}
+                className={`sidebar-item w-full relative ${mode === 'connect' ? 'active' : ''}`}
+                style={mode === 'connect' ? { backgroundColor: '#16a34a' } : undefined}
+              >
+                <span className="sidebar-item-icon"><Spline size={16} /></span>
+                <span className="sidebar-item-label">Conectar</span>
+                {!isExpanded && <span className="sidebar-tooltip">Conectar</span>}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Edit actions */}
+        {!readOnly && (
+          <>
+            <div className="sidebar-divider" />
+            {isExpanded && <div className="sidebar-section-title">Editar</div>}
+            <div className="px-2 space-y-1">
+              <button
+                onClick={() => undo()}
+                disabled={!canUndo}
+                className="sidebar-item w-full relative disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <span className="sidebar-item-icon"><Undo2 size={16} /></span>
+                <span className="sidebar-item-label">Deshacer</span>
+                {!isExpanded && <span className="sidebar-tooltip">Deshacer (Ctrl+Z)</span>}
+              </button>
+              <button
+                onClick={() => redo()}
+                disabled={!canRedo}
+                className="sidebar-item w-full relative disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <span className="sidebar-item-icon"><Redo2 size={16} /></span>
+                <span className="sidebar-item-label">Rehacer</span>
+                {!isExpanded && <span className="sidebar-tooltip">Rehacer (Ctrl+Shift+Z)</span>}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Add nodes */}
+        {!readOnly && (
+          <>
+            <div className="sidebar-divider" />
+            {isExpanded && <div className="sidebar-section-title">Agregar</div>}
+            <div className="px-2">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="sidebar-item w-full relative"
+              >
+                <span className="sidebar-item-icon"><Plus size={16} /></span>
+                <span className="sidebar-item-label flex-1 flex items-center justify-between">
+                  Agregar nodo
+                  {showAddMenu ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                </span>
+                {!isExpanded && <span className="sidebar-tooltip">Agregar nodo</span>}
+              </button>
+              <div className={`sidebar-submenu ${showAddMenu && isExpanded ? 'open' : ''}`}>
+                <div className="pl-4 py-1 space-y-1">
+                  {nodeTypes.map((nt) => {
+                    const Icon = getIconComponent(nt.icon);
+                    return (
+                      <button
+                        key={nt.name}
+                        onClick={() => handleAddNode(nt.name)}
+                        className="sidebar-item w-full text-xs"
+                      >
+                        <span className="sidebar-item-icon"><Icon size={14} style={{ color: nt.color }} /></span>
+                        <span className="sidebar-item-label">{nt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Layout */}
+        {!readOnly && (
+          <>
+            <div className="px-2 mt-1">
+              <button
+                onClick={() => setShowLayoutMenu(!showLayoutMenu)}
+                className="sidebar-item w-full relative"
+              >
+                <span className="sidebar-item-icon"><LayoutGrid size={16} /></span>
+                <span className="sidebar-item-label flex-1 flex items-center justify-between">
+                  Layout
+                  {showLayoutMenu ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                </span>
+                {!isExpanded && <span className="sidebar-tooltip">Layout automático</span>}
+              </button>
+              <div className={`sidebar-submenu ${showLayoutMenu && isExpanded ? 'open' : ''}`}>
+                <div className="pl-4 py-1 space-y-1">
+                  {([
+                    { dir: 'TB' as const, label: 'Arriba → Abajo', icon: '↓' },
+                    { dir: 'LR' as const, label: 'Izquierda → Derecha', icon: '→' },
+                    { dir: 'BT' as const, label: 'Abajo → Arriba', icon: '↑' },
+                    { dir: 'RL' as const, label: 'Derecha → Izquierda', icon: '←' },
+                  ]).map(({ dir, label, icon }) => (
+                    <button
+                      key={dir}
+                      onClick={() => { applyLayout(dir); setShowLayoutMenu(false); }}
+                      className="sidebar-item w-full text-xs"
+                    >
+                      <span className="sidebar-item-icon text-sm">{icon}</span>
+                      <span className="sidebar-item-label">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Filter */}
+        <div className="sidebar-divider" />
+        {isExpanded && <div className="sidebar-section-title">Filtros</div>}
+        <div className="px-2">
           <button
-            onClick={() => setShowAddMenu(!showAddMenu)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors" style={{ color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' }}
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            className={`sidebar-item w-full relative ${hiddenNodeTypes.size > 0 ? 'text-amber-400' : ''}`}
           >
-            <Plus size={14} />
-            <span className="hidden sm:inline">Agregar</span>
-            <ChevronDown size={10} />
+            <span className="sidebar-item-icon">
+              <Filter size={16} />
+              {hiddenNodeTypes.size > 0 && (
+                <span className="absolute -top-1 -right-1 text-[8px] bg-amber-600 text-white rounded-full w-3 h-3 flex items-center justify-center">
+                  {hiddenNodeTypes.size}
+                </span>
+              )}
+            </span>
+            <span className="sidebar-item-label flex-1 flex items-center justify-between">
+              Filtrar tipos
+              {showFilterMenu ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </span>
+            {!isExpanded && <span className="sidebar-tooltip">Filtrar por tipo</span>}
           </button>
-          {showAddMenu && (
-            <div className="absolute top-full mt-1 left-0 backdrop-blur-xl border rounded-lg shadow-2xl py-1 min-w-[180px] z-50" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
+          <div className={`sidebar-submenu ${showFilterMenu && isExpanded ? 'open' : ''}`}>
+            <div className="pl-2 py-1 space-y-1">
+              <div className="flex items-center justify-between px-2 py-1 text-[10px]" style={{ color: 'var(--th-text-dimmed)' }}>
+                <button onClick={showAllNodeTypes} style={{ color: 'var(--th-accent)' }}>Todos</button>
+                <span>|</span>
+                <button onClick={hideAllNodeTypes}>Ninguno</button>
+              </div>
               {nodeTypes.map((nt) => {
                 const Icon = getIconComponent(nt.icon);
+                const isHidden = hiddenNodeTypes.has(nt.name);
+                const count = nodes.filter((n) => n.type === nt.name).length;
                 return (
                   <button
                     key={nt.name}
-                    onClick={() => handleAddNode(nt.name)}
-                    className="th-menu-item flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors"
+                    onClick={() => toggleNodeTypeVisibility(nt.name)}
+                    className={`sidebar-item w-full text-xs ${isHidden ? 'opacity-50' : ''}`}
                   >
-                    <Icon size={14} style={{ color: nt.color }} />
-                    {nt.label}
+                    <span className="sidebar-item-icon">
+                      {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </span>
+                    <Icon size={14} style={{ color: isHidden ? 'var(--th-text-faint)' : nt.color }} className="flex-shrink-0" />
+                    <span className={`sidebar-item-label ${isHidden ? 'line-through' : ''}`}>
+                      {nt.label}
+                      {count > 0 && <span className="ml-1 opacity-50">({count})</span>}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* Filter by type */}
-      <div className="relative" ref={filterMenuRef}>
-        <button
-          onClick={() => setShowFilterMenu(!showFilterMenu)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${hiddenNodeTypes.size > 0
-            ? 'text-amber-400 bg-amber-950/40 border border-amber-700/50'
-            : ''
-            }`}
-          style={hiddenNodeTypes.size === 0 ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
-          title="Filtrar por tipo"
-        >
-          <Filter size={14} />
-          <span className="hidden sm:inline">Filtro</span>
-          {hiddenNodeTypes.size > 0 && (
-            <span className="text-[9px] bg-amber-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
-              {hiddenNodeTypes.size}
-            </span>
-          )}
-        </button>
-        {showFilterMenu && (
-          <div className="absolute top-full mt-1 left-0 backdrop-blur-xl border rounded-lg shadow-2xl py-1 min-w-[200px] z-50" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
-            <div className="flex items-center justify-between px-3 py-1.5 border-b" style={{ borderColor: 'var(--th-border)' }}>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--th-text-dimmed)' }}>Visibilidad</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={showAllNodeTypes}
-                  className="text-[10px] transition-colors" style={{ color: 'var(--th-accent)' }}
-                >
-                  Todos
-                </button>
-                <span style={{ color: 'var(--th-text-faint)' }}>|</span>
-                <button
-                  onClick={hideAllNodeTypes}
-                  className="text-[10px] transition-colors" style={{ color: 'var(--th-text-muted)' }}
-                >
-                  Ninguno
-                </button>
+        {/* Search */}
+        <div className="sidebar-divider" />
+        {isExpanded && <div className="sidebar-section-title">Buscar</div>}
+        <div className="px-2">
+          {isExpanded ? (
+            <div className="relative">
+              <div className="flex items-center rounded-lg px-2 py-1.5" style={{ backgroundColor: 'var(--th-bg-input)' }}>
+                <Search size={14} style={{ color: 'var(--th-text-dimmed)' }} />
+                <input
+                  id="node-search-input"
+                  type="text"
+                  placeholder="Buscar nodos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none text-xs ml-1.5 w-full font-mono"
+                  style={{ color: 'var(--th-text-primary)' }}
+                />
               </div>
+              {showSearch && searchResults.length > 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 backdrop-blur-xl border rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto z-50" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
+                  {searchResults.map((node) => {
+                    const Icon = getIconComponent(getNodeIcon(node.type));
+                    return (
+                      <button
+                        key={node.id}
+                        onClick={() => handleFocusNode(node.id)}
+                        className="sidebar-item w-full text-xs"
+                      >
+                        <Icon size={12} style={{ color: getNodeColor(node.type) }} />
+                        <span className="truncate">{node.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            {nodeTypes.map((nt) => {
-              const Icon = getIconComponent(nt.icon);
-              const isHidden = hiddenNodeTypes.has(nt.name);
-              const count = nodes.filter((n) => n.type === nt.name).length;
-              return (
-                <button
-                  key={nt.name}
-                  onClick={() => toggleNodeTypeVisibility(nt.name)}
-                  className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors ${isHidden ? '' : 'th-menu-item'
-                    }`}
-                  style={isHidden ? { color: 'var(--th-text-faint)' } : undefined}
-                >
-                  {isHidden ? <EyeOff size={12} style={{ color: 'var(--th-text-faint)' }} /> : <Eye size={12} style={{ color: 'var(--th-text-muted)' }} />}
-                  <Icon size={14} style={{ color: isHidden ? 'var(--th-text-faint)' : nt.color }} />
-                  <span className={isHidden ? 'line-through' : ''}>{nt.label}</span>
-                  {count > 0 && (
-                    <span className="ml-auto text-[10px]" style={{ color: isHidden ? 'var(--th-text-faint)' : 'var(--th-text-dimmed)' }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="relative" ref={searchRef}>
-        <div className="flex items-center rounded-lg px-2 py-1" style={{ backgroundColor: 'var(--th-bg-input)' }}>
-          <Search size={14} style={{ color: 'var(--th-text-dimmed)' }} />
-          <input
-            id="node-search-input"
-            type="text"
-            placeholder="Buscar... (Ctrl+F)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none text-xs ml-1.5 w-32 font-mono"
-            style={{ color: 'var(--th-text-primary)' }}
-          />
+          ) : (
+            <button
+              onClick={() => { setIsExpanded(true); setIsPinned(true); setTimeout(() => document.getElementById('node-search-input')?.focus(), 100); }}
+              className="sidebar-item w-full relative"
+            >
+              <span className="sidebar-item-icon"><Search size={16} /></span>
+              <span className="sidebar-tooltip">Buscar (Ctrl+F)</span>
+            </button>
+          )}
         </div>
-        {showSearch && searchResults.length > 0 && (
-          <div className="absolute top-full mt-1 left-0 right-0 backdrop-blur-xl border rounded-lg shadow-2xl py-1 max-h-48 overflow-y-auto z-50" style={{ backgroundColor: 'var(--th-bg-overlay)', borderColor: 'var(--th-border)' }}>
-            {searchResults.map((node) => {
-              const Icon = getIconComponent(getNodeIcon(node.type));
-              return (
-                <button
-                  key={node.id}
-                  onClick={() => handleFocusNode(node.id)}
-                  className="th-menu-item flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs transition-colors"
-                >
-                  <Icon size={12} style={{ color: getNodeColor(node.type) }} />
-                  <span className="truncate">{node.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+
+        {/* Panels */}
+        <div className="sidebar-divider" />
+        {isExpanded && <div className="sidebar-section-title">Paneles</div>}
+        <div className="px-2 space-y-1">
+          <button
+            onClick={toggleMap}
+            className={`sidebar-item w-full relative ${showMap ? 'text-blue-400' : ''}`}
+            style={showMap ? { backgroundColor: 'rgba(37, 99, 235, 0.2)' } : undefined}
+          >
+            <span className="sidebar-item-icon relative">
+              <Map size={16} />
+              {geoCount > 0 && (
+                <span className="absolute -top-1 -right-1 text-[8px] bg-blue-600 text-white rounded-full w-3 h-3 flex items-center justify-center">
+                  {geoCount}
+                </span>
+              )}
+            </span>
+            <span className="sidebar-item-label">Mapa</span>
+            {!isExpanded && <span className="sidebar-tooltip">Mapa</span>}
+          </button>
+          <button
+            onClick={toggleTimeline}
+            className={`sidebar-item w-full relative ${showTimeline ? 'text-orange-400' : ''}`}
+            style={showTimeline ? { backgroundColor: 'rgba(234, 88, 12, 0.2)' } : undefined}
+          >
+            <span className="sidebar-item-icon relative">
+              <Clock size={16} />
+              {dateCount > 0 && (
+                <span className="absolute -top-1 -right-1 text-[8px] bg-orange-600 text-white rounded-full w-3 h-3 flex items-center justify-center">
+                  {dateCount}
+                </span>
+              )}
+            </span>
+            <span className="sidebar-item-label">Timeline</span>
+            {!isExpanded && <span className="sidebar-tooltip">Timeline</span>}
+          </button>
+          <button
+            onClick={toggleAnalysisPanel}
+            className={`sidebar-item w-full relative ${showAnalysisPanel ? 'text-purple-400' : ''}`}
+            style={showAnalysisPanel ? { backgroundColor: 'rgba(147, 51, 234, 0.2)' } : undefined}
+          >
+            <span className="sidebar-item-icon"><GitCommitHorizontal size={16} /></span>
+            <span className="sidebar-item-label">Análisis</span>
+            {!isExpanded && <span className="sidebar-tooltip">Análisis</span>}
+          </button>
+        </div>
+
+        {/* Export */}
+        <div className="sidebar-divider" />
+        {isExpanded && <div className="sidebar-section-title">Exportar</div>}
+        <div className="px-2 space-y-1">
+          <button onClick={handleExport} className="sidebar-item w-full relative">
+            <span className="sidebar-item-icon"><Download size={16} /></span>
+            <span className="sidebar-item-label">Exportar JSON</span>
+            {!isExpanded && <span className="sidebar-tooltip">Exportar JSON</span>}
+          </button>
+          <button onClick={handleExportPNG} className="sidebar-item w-full relative">
+            <span className="sidebar-item-icon"><ImageDown size={16} /></span>
+            <span className="sidebar-item-label">Exportar PNG</span>
+            {!isExpanded && <span className="sidebar-tooltip">Exportar PNG</span>}
+          </button>
+        </div>
       </div>
 
-      {/* Export */}
-      <button
-        onClick={handleExport}
-        className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors" style={{ color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' }}
-        title="Exportar JSON"
-      >
-        <Download size={14} />
-      </button>
-      <button
-        onClick={handleExportPNG}
-        className="flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors" style={{ color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' }}
-        title="Exportar PNG"
-      >
-        <ImageDown size={14} />
-      </button>
-
-      {/* Map toggle */}
-      <button
-        onClick={toggleMap}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showMap
-          ? 'text-blue-400 bg-blue-950/40 border border-blue-700/50'
-          : ''
-          }`}
-        style={!showMap ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
-        title="Mapa de geolocalización"
-      >
-        <Map size={14} />
-        <span className="hidden sm:inline">Mapa</span>
-        {(() => {
-          const geoCount = nodes.filter((n) => {
-            const meta = n.metadata as Record<string, string> | null;
-            if (!meta) return false;
-            const lat = parseFloat(meta.latitude);
-            const lng = parseFloat(meta.longitude);
-            return !isNaN(lat) && !isNaN(lng);
-          }).length;
-          return geoCount > 0 ? (
-            <span className="text-[9px] bg-blue-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
-              {geoCount}
+      {/* Footer - Theme selector */}
+      <div className="border-t p-2" style={{ borderColor: 'var(--th-border)' }}>
+        <div className={`flex ${isExpanded ? 'justify-between items-center' : 'justify-center'}`}>
+          {isExpanded && (
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--th-text-faint)' }}>
+              Tema
             </span>
-          ) : null;
-        })()}
-      </button>
-
-      {/* Timeline toggle */}
-      <button
-        onClick={toggleTimeline}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showTimeline
-          ? 'text-orange-400 bg-orange-950/40 border border-orange-700/50'
-          : ''
-          }`}
-        style={!showTimeline ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
-        title="Línea temporal"
-      >
-        <Clock size={14} />
-        <span className="hidden sm:inline">Timeline</span>
-        {(() => {
-          const dateCount = nodes.filter((n) => {
-            const meta = n.metadata as Record<string, string> | null;
-            return meta?.date && !isNaN(new Date(meta.date).getTime());
-          }).length;
-          return dateCount > 0 ? (
-            <span className="text-[9px] bg-orange-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
-              {dateCount}
-            </span>
-          ) : null;
-        })()}
-      </button>
-
-      {/* Analysis toggle */}
-      <button
-        onClick={toggleAnalysisPanel}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${showAnalysisPanel
-            ? 'text-purple-400 bg-purple-950/40 border border-purple-700/50'
-            : ''
-          }`}
-        style={!showAnalysisPanel ? { color: 'var(--th-text-secondary)', backgroundColor: 'var(--th-bg-input)' } : undefined}
-        title="Panel de Análisis (Shortest Path)"
-      >
-        <GitCommitHorizontal size={14} />
-        <span className="hidden sm:inline">Análisis</span>
-      </button>
-
-      {/* Theme selector */}
-      <ThemeSelector />
+          )}
+          <ThemeSelector compact={!isExpanded} />
+        </div>
+      </div>
     </div>
   );
 }
