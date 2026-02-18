@@ -13,6 +13,7 @@ import TimelinePanel from '@/components/timeline/TimelinePanel';
 import AnalysisPanel from '@/components/analysis/AnalysisPanel';
 import { ArrowLeft, Globe, Lock, Eye, Users } from 'lucide-react';
 import CollaboratorModal from '@/components/ui/CollaboratorModal';
+import ThemeSelector from '@/components/ui/ThemeSelector';
 import { ReactFlowProvider } from '@xyflow/react';
 
 export default function EditorPage() {
@@ -216,6 +217,8 @@ export default function EditorPage() {
 
           {/* Badges & controls — top right */}
           <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+            {/* Theme selector */}
+            <ThemeSelector />
             {/* Collaborator badge */}
             {isCollaborator && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-purple-400 bg-purple-950/50 backdrop-blur-xl border border-purple-700/50 rounded-lg font-mono">

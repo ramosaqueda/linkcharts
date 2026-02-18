@@ -10,7 +10,6 @@ import {
 import { useGraphStore } from '@/lib/store';
 import { getIconComponent } from '@/lib/icon-map';
 import { useReactFlow } from '@xyflow/react';
-import ThemeSelector from './ThemeSelector';
 
 export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
   const {
@@ -496,17 +495,6 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
         </div>
       </div>
 
-      {/* Footer - Theme selector */}
-      <div className="border-t p-2" style={{ borderColor: 'var(--th-border)' }}>
-        <div className={`flex ${isExpanded ? 'justify-between items-center' : 'justify-center'}`}>
-          {isExpanded && (
-            <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--th-text-faint)' }}>
-              Tema
-            </span>
-          )}
-          <ThemeSelector compact={!isExpanded} />
-        </div>
-      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Palette } from 'lucide-react';
 import { useGraphStore } from '@/lib/store';
 import { THEMES } from '@/lib/themes';
 
-export default function ThemeSelector({ compact = false }: { compact?: boolean }) {
+export default function ThemeSelector() {
   const { theme, setTheme } = useGraphStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -26,24 +26,23 @@ export default function ThemeSelector({ compact = false }: { compact?: boolean }
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center justify-center gap-1.5 text-xs rounded-lg transition-colors ${
-          compact ? 'p-2' : 'px-2.5 py-1.5'
-        }`}
+        className="flex items-center justify-center p-2 rounded-lg transition-colors backdrop-blur-xl border"
         style={{
           color: 'var(--th-text-muted)',
-          backgroundColor: 'var(--th-bg-input)',
+          backgroundColor: 'var(--th-bg-overlay-light)',
+          borderColor: 'var(--th-border)',
         }}
-        title="Cambiar tema"
+        title={`Tema: ${current.name}`}
       >
-        <Palette size={compact ? 16 : 14} />
-        {!compact && <span className="hidden sm:inline">{current.name}</span>}
+        <Palette size={14} />
       </button>
       {open && (
         <div
-          className={`absolute ${compact ? 'bottom-full mb-1 left-0' : 'top-full mt-1 right-0'} rounded-lg shadow-2xl py-1 min-w-[200px] z-50 border backdrop-blur-xl`}
+          className="absolute top-full mt-1 right-0 rounded-lg shadow-2xl py-1 min-w-[200px] border backdrop-blur-xl"
           style={{
             backgroundColor: 'var(--th-bg-overlay)',
             borderColor: 'var(--th-border)',
+            zIndex: 9999,
           }}
         >
           <div
