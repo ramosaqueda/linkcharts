@@ -112,7 +112,7 @@ export default function LeafletMap({ geoNodes, selectedNodeId, onNodeSelect }: L
       style={{ background: 'var(--th-leaflet-bg)' }}
     >
       <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name={TILE_LAYERS.dark.name}>
+        <LayersControl.BaseLayer name={TILE_LAYERS.dark.name}>
           <TileLayer
             attribution={TILE_LAYERS.dark.attribution}
             url={TILE_LAYERS.dark.url}
@@ -120,7 +120,7 @@ export default function LeafletMap({ geoNodes, selectedNodeId, onNodeSelect }: L
           />
         </LayersControl.BaseLayer>
 
-        <LayersControl.BaseLayer name={TILE_LAYERS.satellite.name}>
+        <LayersControl.BaseLayer checked name={TILE_LAYERS.satellite.name}>
           <TileLayer
             attribution={TILE_LAYERS.satellite.attribution}
             url={TILE_LAYERS.satellite.url}
