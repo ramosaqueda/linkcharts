@@ -47,6 +47,9 @@ interface GraphStore {
   nodeTypes: NodeTypeConfig[];
   photoModal: PhotoModalState | null;
 
+  // Focus/Prezi effect
+  focusOnSelect: boolean;
+
   // Analysis state
   showAnalysisPanel: boolean;
   highlightedPath: string[] | null;
@@ -82,6 +85,7 @@ interface GraphStore {
   setTheme: (theme: ThemeId) => void;
   openPhotoModal: (photoUrl: string, label: string) => void;
   closePhotoModal: () => void;
+  toggleFocusOnSelect: () => void;
 
   addNode: (graphId: string, type: NodeType, label: string, positionX: number, positionY: number, metadata?: Record<string, string>) => Promise<DbNode | null>;
   updateNode: (id: string, data: Partial<Pick<DbNode, 'label' | 'type' | 'positionX' | 'positionY' | 'metadata' | 'color' | 'icon'>>) => Promise<void>;
@@ -98,6 +102,7 @@ interface GraphStore {
 
   // Layout
   applyLayout: (direction: 'TB' | 'LR' | 'BT' | 'RL') => Promise<void>;
+  applyHierarchyLayout: (positions: Record<string, { x: number; y: number }>) => Promise<void>;
 
   // Drag position capture
   setDragStartPositions: (positions: Record<string, { x: number; y: number }>) => void;
@@ -148,6 +153,9 @@ export const useGraphStore = create<GraphStore>((set, get) => {
     nodeTypes: [],
     theme: (typeof window !== 'undefined' ? localStorage.getItem('linkcharts-theme') as ThemeId : null) || 'dark',
     photoModal: null,
+
+    // Focus/Prezi effect (default enabled)
+    focusOnSelect: (typeof window !== 'undefined' ? localStorage.getItem('linkcharts-focus-on-select') !== 'false' : true),
 
     // Analysis state
     showAnalysisPanel: false,
@@ -223,6 +231,13 @@ export const useGraphStore = create<GraphStore>((set, get) => {
     },
     openPhotoModal: (photoUrl, label) => set({ photoModal: { photoUrl, label } }),
     closePhotoModal: () => set({ photoModal: null }),
+    toggleFocusOnSelect: () => {
+      const newValue = !get().focusOnSelect;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('linkcharts-focus-on-select', String(newValue));
+      }
+      set({ focusOnSelect: newValue });
+    },
 
     setDragStartPositions: (positions) => {
       _dragStartPositions = positions;
@@ -638,6 +653,50 @@ export const useGraphStore = create<GraphStore>((set, get) => {
         }));
         await Promise.all(
           Array.from(positions.entries()).map(([id, p]) =>
+            fetch(`/api/nodes/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ positionX: p.x, positionY: p.y }),
+            }).catch(() => { })
+          )
+        );
+      };
+
+      // Apply new positions
+      await batchUpdate(newPositions);
+
+      // Push history entry
+      if (!_isUndoRedoing) {
+        _pushHistory({
+          undo: async () => { await batchUpdate(oldPositions); },
+          redo: async () => { await batchUpdate(newPositions); },
+        });
+      }
+    },
+
+    applyHierarchyLayout: async (positions) => {
+      const { nodes } = get();
+      if (nodes.length === 0) return;
+
+      // Capture old positions
+      const oldPositions = new Map(nodes.map(n => [n.id, { x: n.positionX, y: n.positionY }]));
+
+      // Convert positions to Map
+      const newPositions = new Map<string, { x: number; y: number }>();
+      Object.entries(positions).forEach(([id, pos]) => {
+        newPositions.set(id, pos);
+      });
+
+      // Helper to batch update positions in state + API
+      const batchUpdate = async (posMap: Map<string, { x: number; y: number }>) => {
+        set(state => ({
+          nodes: state.nodes.map(n => {
+            const p = posMap.get(n.id);
+            return p ? { ...n, positionX: p.x, positionY: p.y } : n;
+          }),
+        }));
+        await Promise.all(
+          Array.from(posMap.entries()).map(([id, p]) =>
             fetch(`/api/nodes/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },

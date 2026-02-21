@@ -2,19 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { useGraphStore } from '@/lib/store';
-import { findShortestPath, calculateDegreeCentrality, calculateBetweennessCentrality, detectCommunities } from '@/lib/analysis/graph-utils';
-import { Play, RotateCcw, X, GitCommitHorizontal } from 'lucide-react';
+import {
+    findShortestPath,
+    calculateDegreeCentrality,
+    calculateBetweennessCentrality,
+    detectCommunities,
+    analyzeHierarchy,
+    calculateHierarchyLayout,
+    type HierarchyResult,
+    type HierarchyNode,
+} from '@/lib/analysis/graph-utils';
+import { Play, RotateCcw, X, GitCommitHorizontal, Crown, Users, User, UserMinus, LayoutTemplate } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
 
 export default function AnalysisPanel() {
-    const { nodes, edges, selectedNodeId, toggleAnalysisPanel, setHighlightedPath, clearHighlightedPath, analysisSourceNodeId, clearAnalysisSourceNodeId } = useGraphStore();
-    // const { getNodes, getEdges } = useReactFlow(); // Not needed if we use store nodes/edges which are synced
-    const [algorithm, setAlgorithm] = useState<'shortest-path' | 'degree-centrality' | 'betweenness-centrality' | 'louvain-communities'>('shortest-path');
+    const { nodes, edges, selectedNodeId, toggleAnalysisPanel, setHighlightedPath, clearHighlightedPath, analysisSourceNodeId, clearAnalysisSourceNodeId, applyHierarchyLayout } = useGraphStore();
+    const { fitView } = useReactFlow();
+    const [algorithm, setAlgorithm] = useState<'shortest-path' | 'degree-centrality' | 'betweenness-centrality' | 'louvain-communities' | 'hierarchy'>('shortest-path');
     const [sourceId, setSourceId] = useState<string>('');
     const [targetId, setTargetId] = useState<string>('');
+    const [leaderCount, setLeaderCount] = useState<number>(3);
     const [resultPath, setResultPath] = useState<string[] | null>(null);
     const [centralityResults, setCentralityResults] = useState<{ nodeId: string; score: number }[] | null>(null);
     const [communityResults, setCommunityResults] = useState<Record<string, string[]> | null>(null);
+    const [hierarchyResults, setHierarchyResults] = useState<HierarchyResult | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // const nodes = getNodes(); // Use store nodes instead for consistency with selection
@@ -25,6 +36,7 @@ export default function AnalysisPanel() {
         setResultPath(null);
         setCentralityResults(null);
         setCommunityResults(null);
+        setHierarchyResults(null);
         clearHighlightedPath();
 
         if (algorithm === 'shortest-path') {
@@ -54,6 +66,17 @@ export default function AnalysisPanel() {
         } else if (algorithm === 'louvain-communities') {
             const results = detectCommunities(nodes, edges);
             setCommunityResults(results);
+        } else if (algorithm === 'hierarchy') {
+            if (nodes.length < 2) {
+                setError('Se necesitan al menos 2 nodos para analizar jerarquía.');
+                return;
+            }
+            const results = analyzeHierarchy(nodes, edges, leaderCount);
+            setHierarchyResults(results);
+            // Highlight leaders
+            if (results.leaders.length > 0) {
+                setHighlightedPath(results.leaders);
+            }
         }
     };
 
@@ -63,8 +86,50 @@ export default function AnalysisPanel() {
         setResultPath(null);
         setCentralityResults(null);
         setCommunityResults(null);
+        setHierarchyResults(null);
         setError(null);
         clearHighlightedPath();
+    };
+
+    const handleApplyHierarchyLayout = async () => {
+        if (!hierarchyResults) return;
+        const positions = calculateHierarchyLayout(hierarchyResults, {
+            nodeWidth: 150,
+            nodeHeight: 80,
+            levelGap: 180,
+            nodeGap: 100,
+            startX: 100,
+            startY: 50,
+        });
+        await applyHierarchyLayout(positions);
+        setTimeout(() => fitView({ padding: 0.2, duration: 500 }), 100);
+    };
+
+    const getRoleIcon = (role: HierarchyNode['role']) => {
+        switch (role) {
+            case 'leader': return <Crown size={12} className="text-yellow-400" />;
+            case 'lieutenant': return <Users size={12} className="text-orange-400" />;
+            case 'operative': return <User size={12} className="text-blue-400" />;
+            case 'peripheral': return <UserMinus size={12} className="text-gray-400" />;
+        }
+    };
+
+    const getRoleLabel = (role: HierarchyNode['role']) => {
+        switch (role) {
+            case 'leader': return 'Líder';
+            case 'lieutenant': return 'Teniente';
+            case 'operative': return 'Operativo';
+            case 'peripheral': return 'Periférico';
+        }
+    };
+
+    const getRoleColor = (role: HierarchyNode['role']) => {
+        switch (role) {
+            case 'leader': return 'bg-yellow-900/30 border-yellow-700/50 text-yellow-300';
+            case 'lieutenant': return 'bg-orange-900/30 border-orange-700/50 text-orange-300';
+            case 'operative': return 'bg-blue-900/30 border-blue-700/50 text-blue-300';
+            case 'peripheral': return 'bg-gray-800/30 border-gray-700/50 text-gray-400';
+        }
     };
 
     const setSourceFromSelection = () => {
@@ -118,6 +183,7 @@ export default function AnalysisPanel() {
                         <option value="degree-centrality">Centralidad de Grado (Degree)</option>
                         <option value="betweenness-centrality">Centralidad de Intermediación (Betweenness)</option>
                         <option value="louvain-communities">Detección de Comunidades (Louvain)</option>
+                        <option value="hierarchy">Estructura Jerárquica (Bandas)</option>
                     </select>
                 </div>
 
@@ -176,6 +242,28 @@ export default function AnalysisPanel() {
                                     <option key={n.id} value={n.id}>{n.label || n.id}</option>
                                 ))}
                             </select>
+                        </div>
+                    </div>
+                )}
+
+                {algorithm === 'hierarchy' && (
+                    <div className="space-y-3">
+                        <div className="text-[10px] text-gray-400 text-center italic">
+                            Identifica líderes y estructura de mando basándose en centralidad combinada.
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--th-text-dimmed)' }}>
+                                Número de líderes a detectar
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={leaderCount}
+                                onChange={(e) => setLeaderCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                                className="w-full border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-blue-500 transition-colors"
+                                style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)', color: 'var(--th-text-primary)' }}
+                            />
                         </div>
                     </div>
                 )}
@@ -315,6 +403,145 @@ export default function AnalysisPanel() {
                                         </button>
                                     </div>
                                 ))}
+                        </div>
+                    </div>
+                )}
+
+                {hierarchyResults && (
+                    <div className="space-y-3 animate-fadeIn">
+                        {/* Summary */}
+                        <div className="flex items-center justify-between">
+                            <div className="text-[10px] uppercase tracking-wider font-semibold text-yellow-400">
+                                Estructura Jerárquica
+                            </div>
+                            <button
+                                onClick={handleApplyHierarchyLayout}
+                                className="flex items-center gap-1.5 px-2 py-1 text-[9px] bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors"
+                                title="Reorganizar nodos en layout jerárquico"
+                            >
+                                <LayoutTemplate size={10} />
+                                Aplicar Layout
+                            </button>
+                        </div>
+
+                        {/* Leaders */}
+                        <div className="rounded p-2 border" style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)' }}>
+                            <div className="flex items-center gap-1.5 mb-2">
+                                <Crown size={12} className="text-yellow-400" />
+                                <span className="text-[10px] uppercase tracking-wider font-semibold text-yellow-300">
+                                    Líderes Identificados ({hierarchyResults.leaders.length})
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {hierarchyResults.leaders.map(leaderId => {
+                                    const node = nodes.find(n => n.id === leaderId);
+                                    const hNode = hierarchyResults.nodes.find(h => h.nodeId === leaderId);
+                                    return (
+                                        <button
+                                            key={leaderId}
+                                            onClick={() => setHighlightedPath([leaderId])}
+                                            className="flex items-center gap-1 px-2 py-1 rounded border text-[10px] bg-yellow-900/30 border-yellow-700/50 text-yellow-200 hover:bg-yellow-800/40 transition-colors"
+                                        >
+                                            <Crown size={10} />
+                                            <span className="truncate max-w-[100px]">{node?.label || leaderId}</span>
+                                            <span className="text-[8px] text-yellow-400/70">
+                                                {((hNode?.leadershipScore || 0) * 100).toFixed(0)}%
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Levels breakdown */}
+                        <div className="rounded p-2 border" style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)' }}>
+                            <div className="text-[10px] uppercase tracking-wider font-semibold mb-2" style={{ color: 'var(--th-text-muted)' }}>
+                                Niveles Jerárquicos
+                            </div>
+                            <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                {Object.entries(hierarchyResults.levels)
+                                    .filter(([level]) => parseInt(level) >= 0)
+                                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                                    .map(([level, nodeIds]) => {
+                                        const levelNum = parseInt(level);
+                                        const role = levelNum === 0 ? 'leader' : levelNum === 1 ? 'lieutenant' : levelNum <= 3 ? 'operative' : 'peripheral';
+                                        return (
+                                            <div
+                                                key={level}
+                                                className="flex items-center justify-between text-[10px] py-1 px-2 rounded hover:bg-white/5 cursor-pointer"
+                                                onClick={() => setHighlightedPath(nodeIds)}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {getRoleIcon(role as HierarchyNode['role'])}
+                                                    <span style={{ color: 'var(--th-text-primary)' }}>
+                                                        Nivel {level}
+                                                    </span>
+                                                    <span className="text-[9px]" style={{ color: 'var(--th-text-dimmed)' }}>
+                                                        ({getRoleLabel(role as HierarchyNode['role'])})
+                                                    </span>
+                                                </div>
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10">
+                                                    {nodeIds.length} nodos
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                {hierarchyResults.levels[-1] && hierarchyResults.levels[-1].length > 0 && (
+                                    <div
+                                        className="flex items-center justify-between text-[10px] py-1 px-2 rounded hover:bg-white/5 cursor-pointer opacity-60"
+                                        onClick={() => setHighlightedPath(hierarchyResults.levels[-1])}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <UserMinus size={12} className="text-gray-500" />
+                                            <span style={{ color: 'var(--th-text-muted)' }}>
+                                                Desconectados
+                                            </span>
+                                        </div>
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10">
+                                            {hierarchyResults.levels[-1].length} nodos
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Detailed node list by role */}
+                        <div className="rounded p-2 border" style={{ backgroundColor: 'var(--th-bg-input)', borderColor: 'var(--th-border)' }}>
+                            <div className="text-[10px] uppercase tracking-wider font-semibold mb-2" style={{ color: 'var(--th-text-muted)' }}>
+                                Miembros por Rol
+                            </div>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {(['leader', 'lieutenant', 'operative', 'peripheral'] as const).map(role => {
+                                    const roleNodes = hierarchyResults.nodes.filter(n => n.role === role);
+                                    if (roleNodes.length === 0) return null;
+                                    return (
+                                        <div key={role} className="space-y-1">
+                                            <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider">
+                                                {getRoleIcon(role)}
+                                                <span className={getRoleColor(role).split(' ').pop()}>
+                                                    {getRoleLabel(role)} ({roleNodes.length})
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1 pl-4">
+                                                {roleNodes.slice(0, 8).map(hNode => (
+                                                    <button
+                                                        key={hNode.nodeId}
+                                                        onClick={() => setHighlightedPath([hNode.nodeId])}
+                                                        className={`px-1.5 py-0.5 rounded border text-[9px] transition-colors hover:brightness-110 ${getRoleColor(role)}`}
+                                                    >
+                                                        {hNode.label}
+                                                    </button>
+                                                ))}
+                                                {roleNodes.length > 8 && (
+                                                    <span className="text-[9px] text-gray-500 self-center">
+                                                        +{roleNodes.length - 8} más
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 )}

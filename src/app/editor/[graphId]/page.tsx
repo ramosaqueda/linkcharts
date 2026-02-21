@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useGraphStore } from '@/lib/store';
 import type { GraphWithRelations } from '@/lib/types';
@@ -18,6 +18,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 
 export default function EditorPage() {
   const params = useParams<{ graphId: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
   const {
@@ -110,6 +111,12 @@ export default function EditorPage() {
         setIsOwner(owner);
         setIsCollaborator(!owner && (data.collaborators?.some(c => c.userId === session?.user?.id) ?? false));
         setIsPublic(data.isPublic);
+
+        // Select node from URL param (from global search)
+        const selectNodeId = searchParams.get('select');
+        if (selectNodeId && data.nodes.some((n: { id: string }) => n.id === selectNodeId)) {
+          setTimeout(() => setSelectedNode(selectNodeId), 200);
+        }
       } catch {
         setError('Error al cargar el grafo');
       }
@@ -119,7 +126,7 @@ export default function EditorPage() {
     if (session) {
       fetchGraph();
     }
-  }, [params.graphId, session, setGraph, setNodes, setEdges]);
+  }, [params.graphId, session, setGraph, setNodes, setEdges, searchParams, setSelectedNode]);
 
   const handleTogglePublic = async () => {
     try {

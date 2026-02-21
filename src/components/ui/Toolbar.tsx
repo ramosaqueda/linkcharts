@@ -5,7 +5,7 @@ import {
   MousePointer2, Spline, Plus, Search, Download, ImageDown,
   ChevronRight, ChevronLeft, Filter, Eye, EyeOff, Undo2, Redo2,
   LayoutGrid, Map, Clock, GitCommitHorizontal, Menu, X,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Focus,
 } from 'lucide-react';
 import { useGraphStore } from '@/lib/store';
 import { getIconComponent } from '@/lib/icon-map';
@@ -18,6 +18,7 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
     canUndo, canRedo, undo, redo, applyLayout,
     showMap, toggleMap, showTimeline, toggleTimeline,
     showAnalysisPanel, toggleAnalysisPanel,
+    focusOnSelect, toggleFocusOnSelect,
     nodeTypes, getNodeColor, getNodeLabel, getNodeIcon,
   } = useGraphStore();
   const { setCenter, getZoom } = useReactFlow();
@@ -475,6 +476,16 @@ export default function Toolbar({ readOnly = false }: { readOnly?: boolean }) {
             <span className="sidebar-item-icon"><GitCommitHorizontal size={16} /></span>
             <span className="sidebar-item-label">Análisis</span>
             {!isExpanded && <span className="sidebar-tooltip">Análisis</span>}
+          </button>
+          <button
+            onClick={toggleFocusOnSelect}
+            className={`sidebar-item w-full relative ${focusOnSelect ? 'text-cyan-400' : ''}`}
+            style={focusOnSelect ? { backgroundColor: 'rgba(6, 182, 212, 0.2)' } : undefined}
+            title="Efecto de enfoque al seleccionar nodos"
+          >
+            <span className="sidebar-item-icon"><Focus size={16} /></span>
+            <span className="sidebar-item-label">Auto-enfoque</span>
+            {!isExpanded && <span className="sidebar-tooltip">Auto-enfoque (Prezi)</span>}
           </button>
         </div>
 

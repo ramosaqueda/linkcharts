@@ -9,9 +9,10 @@ import {
   Upload, Download, FileSpreadsheet, FileJson, AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
-import type { GraphSummary } from '@/lib/types';
+import type { GraphSummary, NodeTypeConfig } from '@/lib/types';
 import type { ParseResult } from '@/lib/import-parser';
 import ThemeSelector from '@/components/ui/ThemeSelector';
+import GlobalSearch from '@/components/ui/GlobalSearch';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [importPreview, setImportPreview] = useState<ParseResult | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [nodeTypes, setNodeTypes] = useState<NodeTypeConfig[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userId = session?.user?.id;
@@ -51,8 +53,19 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
+  const fetchNodeTypes = async () => {
+    try {
+      const res = await fetch('/api/node-types');
+      if (res.ok) {
+        const data = await res.json();
+        setNodeTypes(data);
+      }
+    } catch { /* silent */ }
+  };
+
   useEffect(() => {
     fetchGraphs();
+    fetchNodeTypes();
   }, []);
 
   const handleFileSelect = async (file: File) => {
@@ -262,7 +275,8 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold" style={{ color: 'var(--th-text-primary)' }}>LinkCharts</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs" style={{ color: 'var(--th-text-muted)' }}>{session?.user?.name}</span>
+            <GlobalSearch nodeTypes={nodeTypes} />
+            <span className="text-xs hidden md:block" style={{ color: 'var(--th-text-muted)' }}>{session?.user?.name}</span>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors shadow-lg shadow-blue-600/20"

@@ -27,6 +27,7 @@ import { useGraphStore } from '@/lib/store';
 import type { Node as DbNode, Edge as DbEdge } from '@/lib/types';
 import ContextMenu from '../ui/ContextMenu';
 import PhotoModal from '../ui/PhotoModal';
+import { useFocusOnSelection } from '@/hooks/useFocusOnSelection';
 
 const nodeTypes = { custom: CustomNodeComponent };
 const edgeTypes = { custom: CustomEdgeComponent };
@@ -87,8 +88,12 @@ function GraphCanvasInner({ readOnly = false }: { readOnly?: boolean }) {
     setDragStartPositions,
     photoModal,
     closePhotoModal,
-    highlightedPath, // Destructure highlightedPath
+    highlightedPath,
+    focusOnSelect,
   } = store;
+
+  // Prezi-like focus effect on node selection
+  useFocusOnSelection({ enabled: focusOnSelect, duration: 400 });
 
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState<RFNode>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<RFEdge>([]);
